@@ -130,7 +130,8 @@ def random_crop_with_text_boxes_cropped(target_size, at_least_one_box_ratio, ima
     if img_width <= target_width and img_height <= target_height:
         return image, text_boxes
 
-    ensure_at_least_one_box = random.uniform(0, 1) <= at_least_one_box_ratio
+    ensure_at_least_one_box = (len(text_boxes)
+                               and random.uniform(0, 1) <= at_least_one_box_ratio)
     crop_left, crop_top = find_good_crop_start(img_width, img_height,
                                                target_width, target_height,
                                                ensure_at_least_one_box)
