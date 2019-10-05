@@ -3,18 +3,20 @@ import tensorflow as tf
 
 
 def score_map_loss(ground_truth_score_map, predicted_score_map):
+    def log(x): return tf.log(tf.clip_by_value(x, 1e-10, 1.0))
+
     ground_truth_shape = tf.cast(tf.shape(ground_truth_score_map), tf.float32)
     beta = 1 - (tf.math.reduce_sum(ground_truth_score_map, axis=[1, 2], keep_dims=True) /
                 (ground_truth_shape[1] * ground_truth_shape[2]))
 
-    loss = (- (beta * ground_truth_score_map * tf.math.log(predicted_score_map))
-            - ((1 - beta) * (1 - ground_truth_score_map) * tf.math.log(1 - predicted_score_map)))
+    loss = (- (beta * ground_truth_score_map * log(predicted_score_map))
+            - ((1 - beta) * (1 - ground_truth_score_map) * log(1 - predicted_score_map)))
 
     return loss
 
 
 def _rbox_angle_loss(ground_truth_angle, predicted_angle):
-    return 1 - tf.math.cos(predicted_angle - ground_truth_angle)
+    return 1 - tf.cos(predicted_angle - ground_truth_angle)
 
 
 def _aabb_box_area(aabb):
@@ -37,7 +39,7 @@ def _rbox_aabb_loss(ground_truth_aabb, predicted_aabb):
         ground_truth_aabb, predicted_aabb)
     union_area = ground_truth_area + predicted_area - intersected_area
 
-    return -tf.math.log(intersected_area / union_area)
+    return -tf.log((intersected_area + 1.0) / (union_area + 1.0))
 
 
 def rbox_geometry_loss(ground_truth_rbox_geometry, predicted_rbox_geometry, lambda_term=10):
