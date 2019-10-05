@@ -45,6 +45,7 @@ class EAST:
               train_steps_per_epoch,
               epochs=100,
               verbosity=1,
+              callbacks=None,
               validation_generator=None,
               validation_steps_per_epoch=None):
         """
@@ -59,6 +60,7 @@ class EAST:
             train_steps_per_epoch,
             epochs,
             verbosity,
+            callbacks,
             validation_data=validation_generator,
             validation_steps=validation_steps_per_epoch)
 
