@@ -1,6 +1,25 @@
+import argparse
 from dataset import msra
 from east import east, data
 from functools import partial
+
+
+def parse_arguments():
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument('--msra-path',
+                        dest='msra_path',
+                        action='store',
+                        required=True,
+                        help='Path to MSRA TD500 training dataset.')
+    parser.add_argument('--batch-size',
+                        dest='batch_size',
+                        action='store',
+                        type=int,
+                        default=32,
+                        help='Image batch size.')
+
+    return parser.parse_args()
 
 
 def build_train_model(input_shape=(512, 512, 3)):
@@ -33,9 +52,10 @@ def process_to_train_data(msra_data,
 
 
 if __name__ == "__main__":
+    args = parse_arguments()
+
     # Load the data.
-    msra_data = load_msra(
-        '/home/beekill/projects/bookual/datasets/MSRA-TD500/train/', 4)
+    msra_data = load_msra(args.msra_path, args.batch_size)
 
     # Convert and pre-process images and groundtruth to correct format
     # expected by the model.
