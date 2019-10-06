@@ -18,6 +18,11 @@ def parse_arguments():
                         type=int,
                         default=32,
                         help='Image batch size.')
+    parser.add_argument('--epochs',
+                        action='store',
+                        type=int,
+                        default=100,
+                        help='Number or training epochs.')
 
     return parser.parse_args()
 
@@ -30,7 +35,7 @@ def build_train_model(input_shape=(512, 512, 3)):
 
 def load_msra(msra_seq, batch_size=32, shuffle=True):
     # return msra.MSRA(msra_path, batch_size, shuffle)
-    return msra.MSRASequence(msra_seq, batch_size, shuffle, multithread=2)
+    return msra.MSRASequence(msra_seq, batch_size, shuffle)
 
 
 def process_to_train_data(msra_seq,
@@ -68,5 +73,6 @@ if __name__ == "__main__":
     east_model.summary_model()
 
     # Begin the training.
-    east_model.train(
-        train_generator, train_steps_per_epoch=len(msra_seq), epochs=2)
+    east_model.train(train_generator,
+                     train_steps_per_epoch=len(msra_seq),
+                     epochs=args.epochs)
