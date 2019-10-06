@@ -1,4 +1,4 @@
-import east.data as data
+import east.preprocessing as preprocessing
 import numpy as np
 from PIL import Image
 import random
@@ -28,7 +28,7 @@ def test_random_crop_always_have_text_boxes():
             generate_random_text_box()
         ]
 
-        cropped_img, cropped_text_boxes = data.random_crop_with_text_boxes_cropped(
+        cropped_img, cropped_text_boxes = preprocessing.random_crop_with_text_boxes_cropped(
             (512, 512), 1.0, img, text_boxes)
 
         assert len(cropped_text_boxes) > 0
@@ -38,7 +38,7 @@ def test_random_crop_always_have_text_boxes():
     for i in range(100):
         text_boxes = [generate_random_text_box() for i in range(35)]
 
-        cropped_img, cropped_text_boxes = data.random_crop_with_text_boxes_cropped(
+        cropped_img, cropped_text_boxes = preprocessing.random_crop_with_text_boxes_cropped(
             (512, 512), 1.0, img, text_boxes)
 
         assert len(cropped_text_boxes) > 0

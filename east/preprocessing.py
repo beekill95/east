@@ -5,6 +5,7 @@ from math import cos, sin, pi
 import numpy as np
 from PIL import Image, ImageDraw
 import random
+from tensorflow.python.keras.utils.data_utils import Sequence
 
 
 def random_scale(scales, image, text_boxes):
@@ -243,3 +244,43 @@ def flow_from_generator(data_iter, processing_pipeline):
             gts.append(gt)
 
         yield np.asarray(images), np.asarray(gts)
+
+
+class PreprocessingSequence(Sequence):
+    """
+    Preprocessing input images and groundtruth text boxes
+    into expected format by the model using Keras Sequence API.
+    """
+
+    def __init__(self, data_sequence, preprocessing_pipeline):
+        """
+        Initialize preprocessing sequence.
+
+        :param data_sequence: a Keras Sequence produces a batch of images and groundtruth text boxes.
+        Expected each image to be a numpy array, and each text box is a list of [difficulty, x1, y1, x2, y2, x3, y3, x4, y4].
+        :param preprocessing_pipeline: a list of preprocess functions to be applied to an image and its text boxes.
+        Those functions should expected to receive two keyword arguments: image and text_boxes.
+        """
+        self._data_sequence = data_sequence
+        self._preprocessing_fn = partial(process_data, preprocessing_pipeline)
+
+    def __len__(self):
+        return len(self._data_sequence)
+
+    def __getitem__(self, index):
+        images, groundtruths = self._data_sequence[index]
+
+        preprocessed_images = []
+        preprocessed_gts = []
+
+        for i in range(len(images)):
+            r = self._preprocessing_fn(images[i], groundtruths[i])
+            gt = generate_ground_truth(r[0], r[1])
+
+            preprocessed_images.append(r[0])
+            preprocessed_gts.append(gt)
+
+        return np.asarray(preprocessed_images), np.asarray(preprocessed_gts)
+
+    def on_epoch_end(self):
+        self._data_sequence.on_epoch_end()
