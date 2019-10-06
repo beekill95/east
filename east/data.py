@@ -46,7 +46,6 @@ def random_rotate(angles, image, text_boxes):
     return rotated_img, rotated_text_boxes
 
 
-# FIXME: there is a bug here when it generates two identical points for image #4.
 def random_crop_with_text_boxes_cropped(target_size, at_least_one_box_ratio, image, text_boxes):
     """
     Random crop an image, also crop the boxes.
