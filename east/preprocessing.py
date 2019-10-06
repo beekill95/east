@@ -63,8 +63,10 @@ def random_crop_with_text_boxes_cropped(target_size, at_least_one_box_ratio, ima
     """
     def find_good_crop_start(img_width, img_height, target_width, target_height, ensure_at_least_one_box):
         if not ensure_at_least_one_box:
-            crop_left = random.randint(0, img_width - target_width - 1)
-            crop_top = random.randint(0, img_height - target_height - 1)
+            crop_left = (0 if img_width <= target_width
+                         else random.randint(0, img_width - target_width - 1))
+            crop_top = (0 if img_height <= target_height
+                        else random.randint(0, img_height - target_height - 1))
             return crop_left, crop_top
         else:
             # Idea:
@@ -87,8 +89,7 @@ def random_crop_with_text_boxes_cropped(target_size, at_least_one_box_ratio, ima
             # select the first 32. That way, every box has an equal
             # change to appear in the cropped region.
             num_text_boxes = len(text_boxes)
-            box_indices = (np.arange(num_text_boxes)
-                           if num_text_boxes < 32
+            box_indices = (np.arange(num_text_boxes) if num_text_boxes < 32
                            else np.random.permutation(num_text_boxes)[:32])
 
             for i in range(len(box_indices)):
