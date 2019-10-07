@@ -2,6 +2,7 @@ import argparse
 from dataset import msra
 from east import east, preprocessing
 from functools import partial
+from tensorflow.python.keras.utils.data_utils import OrderedEnqueuer
 
 
 def parse_arguments():
@@ -58,6 +59,11 @@ def process_to_train_data(msra_seq,
     return preprocessing.PreprocessingSequence(msra_seq, pipeline)
 
 
+def build_training_data_enqueuer(training_seq):
+    enqueuer = OrderedEnqueuer(training_seq)
+    return enqueuer
+
+
 if __name__ == "__main__":
     args = parse_arguments()
 
@@ -66,13 +72,21 @@ if __name__ == "__main__":
 
     # Convert and pre-process images and groundtruth to correct format
     # expected by the model.
-    train_generator = process_to_train_data(msra_seq)
+    training_seq = process_to_train_data(msra_seq)
 
     # Build the model.
     east_model = build_train_model()
     east_model.summary_model()
 
+    # Build generator.
+    enqueuer = build_training_data_enqueuer(training_seq)
+    enqueuer.start()
+
     # Begin the training.
-    east_model.train(train_generator,
+    data_generator = enqueuer.get()
+    east_model.train(data_generator,
                      train_steps_per_epoch=len(msra_seq),
                      epochs=args.epochs)
+
+    # Training finished.
+    enqueuer.stop()
