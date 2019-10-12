@@ -108,12 +108,19 @@ def random_crop_with_text_boxes_cropped(target_size, at_least_one_box_ratio, ima
 
             # FIXME: this selection process will be bias toward
             # long and tall boxes.
-            good_x = np.nonzero(x_box_region)[0]
-            chosen_x = np.random.choice(good_x)
-            chosen_x_val = x_box_region[chosen_x]
+            try:
+                good_x = np.nonzero(x_box_region)[0]
+                chosen_x = np.random.choice(good_x)
+                chosen_x_val = x_box_region[chosen_x]
 
-            good_y = np.nonzero(y_box_region & chosen_x_val)[0]
-            chosen_y = np.random.choice(good_y)
+                good_y = np.nonzero(y_box_region & chosen_x_val)[0]
+                chosen_y = np.random.choice(good_y)
+            except:
+                print(f'image size {(img_width, img_height)}')
+                print(f'num boxes {num_text_boxes}')
+                print(f'boxes {text_boxes}')
+
+                raise 'error'
 
             return chosen_x, chosen_y
 
