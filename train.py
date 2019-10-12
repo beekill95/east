@@ -24,6 +24,11 @@ def parse_arguments():
                         type=int,
                         default=100,
                         help='Number or training epochs.')
+    parser.add_argument('--threads',
+                        action='store',
+                        type=int,
+                        default=2,
+                        help='Number of threads to run when doing preprocessing')
 
     return parser.parse_args()
 
@@ -77,7 +82,7 @@ if __name__ == "__main__":
 
     # Build generator.
     enqueuer = build_training_data_enqueuer(training_seq)
-    enqueuer.start()
+    enqueuer.start(workers=args.threads)
 
     # Begin the training.
     data_generator = enqueuer.get()
