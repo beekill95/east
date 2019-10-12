@@ -112,10 +112,12 @@ def random_crop_with_text_boxes_cropped(target_size, at_least_one_box_ratio, ima
 
                 start_x = max(int(min_x - target_width / 2), 0)
                 end_x = int((min_x + max_x) / 2)
+                end_x = end_x if end_x > 0 else max_x
                 x_box_region[start_x:end_x] |= 1 << i
 
                 start_y = max(int(min_y - target_height / 2), 0)
                 end_y = int((min_y + max_y) / 2)
+                end_y = end_y if end_y > 0 else max_y
                 y_box_region[start_y:end_y] |= 1 << i
 
             # FIXME: this selection process will be bias toward

@@ -127,7 +127,7 @@ def crop_polygon(points, crop_region):
             y = y_in + (x_line - x_in) / in_out_slope
             return x_line, y
 
-    def crop_with(points_iter, line, keep_left, name):
+    def crop_with(points_iter, line, keep_left):
         """
         Crop the points with a line, keep the points that is in the left side of the line,
         if |keep_left| is True, and the right side otherwise.
@@ -173,20 +173,10 @@ def crop_polygon(points, crop_region):
     min_x, max_x, min_y, max_y = crop_region
 
     clipped_polygon = (points[i % len(points)] for i in range(len(points) + 1))
-    clipped_polygon = crop_with(
-        clipped_polygon, (min_x, None), False, "Min X 1")
-    # c = list(clipped_polygon)
-    # clipped_polygon = (b for b in c)
-    clipped_polygon = crop_with(
-        clipped_polygon, (None, max_y), True, "Max Y 2")
-    # c = list(clipped_polygon)
-    # clipped_polygon = (b for b in c)
-    clipped_polygon = crop_with(
-        clipped_polygon, (max_x, None), True, "Max X 3")
-    # c = list(clipped_polygon)
-    # clipped_polygon = (b for b in c)
-    clipped_polygon = crop_with(
-        clipped_polygon, (None, min_y), False, "Min Y 4")
+    clipped_polygon = crop_with(clipped_polygon, (min_x, None), False)
+    clipped_polygon = crop_with(clipped_polygon, (None, max_y), True)
+    clipped_polygon = crop_with(clipped_polygon, (max_x, None), True)
+    clipped_polygon = crop_with(clipped_polygon, (None, min_y), False)
 
     clipped_polygon = np.asarray(list(clipped_polygon))
     return clipped_polygon[:-1]

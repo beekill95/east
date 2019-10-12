@@ -1,7 +1,7 @@
-from tensorflow import keras as keras
-from tensorflow.python.keras import backend as K
 from east.loss import rbox_geometry_loss, score_map_loss
 from east.rbox import decode_rbox
+from tensorflow import keras as keras
+from tensorflow.python.keras import backend as K
 
 
 # TODO: allow save checkpoints after each n epochs
@@ -64,9 +64,8 @@ class EAST:
             validation_data=validation_generator,
             validation_steps=validation_steps_per_epoch)
 
-    def predict(self):
+    def predict(self, image, score_map_threshold=0.5):
         self._assert_model_initialized()
-        pass
 
     def _build_base_network(self, input_shape):
         self._base_network = keras.applications.ResNet50(
@@ -96,7 +95,7 @@ class EAST:
 
         # Scores.
         self._scores = keras.layers.Conv2D(
-            filters=1, kernel_size=(1, 1), activation='relu', name='scores')(feature)
+            filters=1, kernel_size=(1, 1), activation='sigmoid', name='scores')(feature)
 
         if output_geometry == 'RBOX':
             # 4 filters for aabb coordinates, last filter for angle.
