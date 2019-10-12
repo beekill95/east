@@ -35,14 +35,26 @@ def random_rotate(angles, image, text_boxes):
     :param text_boxes: a list of text boxes. Each box is a numpy array of size nx2.
     :return: a tuple of rotated image and text boxes.
     """
-    angle = random.randint(angles[0], angles[1]) * pi / 180
+    angle_deg = random.randint(angles[0], angles[1])
+    angle_rad = angle_deg * pi / 180
 
-    rotated_img = image.rotate(angle)
+    rotated_img = image.rotate(-angle_deg)
 
     # Rotate text boxes.
     img_center = np.asarray(image.size) / 2
-    rotated_text_boxes = [
-        geometry.rotate_polygon(box, angle, img_center) for box in text_boxes]
+
+    rotated_text_boxes = []
+    for box in text_boxes:
+        rotated = geometry.rotate_polygon(box, angle_rad, img_center)
+
+        # Check if the rotated box is outside of the image.
+        min_x, max_x = np.min(rotated[:, 0]), np.max(rotated[:, 0])
+        min_y, max_y = np.min(rotated[:, 1]), np.max(rotated[:, 1])
+
+        if min_x >= image.width or max_x <= 0 or min_y >= image.height or max_y <= 0:
+            continue
+
+        rotated_text_boxes.append(rotated)
 
     return rotated_img, rotated_text_boxes
 

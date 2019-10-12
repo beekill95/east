@@ -35,7 +35,6 @@ def build_train_model(input_shape=(512, 512, 3)):
 
 
 def load_msra(msra_seq, batch_size=32, shuffle=True):
-    # return msra.MSRA(msra_path, batch_size, shuffle)
     return msra.MSRASequence(msra_seq, batch_size, shuffle)
 
 
@@ -43,7 +42,7 @@ def process_to_train_data(msra_seq,
                           crop_target_size=(512, 512),
                           crop_at_least_one_box_ratio=5/8,
                           random_scales=[0.5, 1.0, 1.5, 2.0],
-                          random_angles=[-45, 45]):
+                          random_angles=[-20, 20]):
     pipeline = [
         partial(preprocessing.random_scale, random_scales),
         partial(preprocessing.random_rotate, random_angles),
@@ -54,8 +53,6 @@ def process_to_train_data(msra_seq,
         partial(preprocessing.pad_image, crop_target_size)
     ]
 
-    # msra_iter = iter(msra_seq)
-    # return preprocessing.flow_from_generator(msra_iter, pipeline)
     return preprocessing.PreprocessingSequence(msra_seq, pipeline)
 
 
@@ -90,3 +87,6 @@ if __name__ == "__main__":
 
     # Training finished.
     enqueuer.stop()
+
+    # Save the model.
+    east_model.save_model('./east.model')
