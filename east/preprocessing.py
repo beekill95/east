@@ -174,7 +174,9 @@ def pad_image(target_size, image, text_boxes):
     return padded_img, text_boxes
 
 
-def generate_ground_truth(image, text_boxes, score_map_offset=0.3):
+def generate_ground_truth(image, text_boxes, score_map_offset=30):
+    # FIXME: the offset should be changed accordingly to the size of the box,
+    # or else the offsetted polygon would fall outside of the box.
     def draw_shrinked_text_boxes(offset):
         img_height, img_width, _ = np.shape(image)
 
@@ -184,7 +186,8 @@ def generate_ground_truth(image, text_boxes, score_map_offset=0.3):
         canvas = Image.new("L", (img_width, img_height))
         draw = ImageDraw.Draw(canvas)
         for i in range(len(text_boxes)):
-            draw.polygon(shrinked_text_boxes[i].flatten(), fill=(i+1))
+            p = shrinked_text_boxes[i].flatten().tolist()
+            draw.polygon(p, fill=(i+1))
 
         return np.asarray(canvas)
 
@@ -195,6 +198,8 @@ def generate_ground_truth(image, text_boxes, score_map_offset=0.3):
         return np.expand_dims(score_map, axis=0)
 
     def generate_geometry_map(shrinked_text_boxes_img):
+        # FIXME: handle the case when boxes are triangular, in that case,
+        # minimum bounding boxes might be wrong.
         min_bboxes = [geometry.minimum_bounding_box(box) for box in text_boxes]
 
         img_height, img_width, _ = np.shape(image)
@@ -205,16 +210,17 @@ def generate_ground_truth(image, text_boxes, score_map_offset=0.3):
             r, c = non_zero_x[i], non_zero_y[i]
 
             color = shrinked_text_boxes_img[r, c]
-            bbox = min_bboxes[color - 1]
+            bbox, angle = min_bboxes[color - 1]
 
             # AABB & angle.
-            geometry_map[:4, r, c] = rbox.generate_rbox((r, c), bbox[0])
-            geometry_map[4, r, c] = bbox[1]
+            geometry_map[:4, r, c] = rbox.generate_rbox((r, c), bbox)
+            geometry_map[4, r, c] = angle
 
         return geometry_map[:, ::4, ::4]
 
     shrinked_text_boxes_img = draw_shrinked_text_boxes(score_map_offset)
 
+    # FIXME: we should filtered out boxes that are too small.
     score_map = generate_score_map(shrinked_text_boxes_img)
     geometry_map = generate_geometry_map(shrinked_text_boxes_img)
     gt_map = np.concatenate((score_map, geometry_map), axis=0)

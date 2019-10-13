@@ -54,7 +54,8 @@ def minimum_bounding_box(points):
     hull_edges[-1] = hull_vertices[0] - hull_vertices[-1]
 
     # Angles of each edge.
-    hull_angles = np.arctan2(hull_edges[:, 1], hull_edges[:, 0])
+    # FIXME: the sign of these angles look suspicious
+    hull_angles = -np.arctan2(hull_edges[:, 1], hull_edges[:, 0])
     hull_angles = np.unique(hull_angles)
 
     # Generate rotation matrix for each edge angle.
@@ -215,7 +216,7 @@ def shrink_polygon(polygon, offset):
         # in which direction should we offset the corder to ensure
         # the inset corner is inside the polygon.
         # TODO: check if the sign is correct.
-        sign = 1 - (np.cross(v21_norm, v23_norm) <= 0)
+        sign = 1 if np.cross(v21_norm, v23_norm) <= 0 else -1
         return point_2 + sign * offset * magnitude(e) * bisector
 
     inset_polygon = np.zeros(polygon.shape)
