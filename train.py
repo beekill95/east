@@ -29,6 +29,10 @@ def parse_arguments():
                         type=int,
                         default=2,
                         help='Number of threads to run when doing preprocessing')
+    parser.add_argument('--output',
+                        action='store',
+                        required=True,
+                        help='Name of the output model, followed convention of Keras save api')
 
     return parser.parse_args()
 
@@ -85,13 +89,20 @@ if __name__ == "__main__":
     enqueuer.start(workers=args.threads)
 
     # Begin the training.
-    data_generator = enqueuer.get()
-    east_model.train(data_generator,
-                     train_steps_per_epoch=len(msra_seq),
-                     epochs=args.epochs)
+    try:
+        print('===== Begin Training =====')
 
-    # Training finished.
+        data_generator = enqueuer.get()
+        east_model.train(data_generator,
+                         train_steps_per_epoch=len(msra_seq),
+                         epochs=args.epochs)
+
+        print('===== End Training =====')
+    except KeyboardInterrupt:
+        print('===== Training Interupted =====')
+
+    # Stop generator.
     enqueuer.stop()
 
     # Save the model.
-    east_model.save_model('./east.model')
+    east_model.save_model(args.output)
