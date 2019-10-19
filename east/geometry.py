@@ -92,7 +92,7 @@ def minimum_bounding_box(points):
 
     # Rotate the points back to original orientation.
     min_rect = np.asarray([
-        [best_min_x, best_min_y]
+        [best_min_x, best_min_y],
         [best_min_x, best_max_y],
         [best_max_x, best_max_y],
         [best_max_x, best_min_y],
