@@ -54,16 +54,16 @@ def minimum_bounding_box(points):
     hull_edges[-1] = hull_vertices[0] - hull_vertices[-1]
 
     # Angles of each edge.
-    # FIXME: the sign of these angles look suspicious
-    hull_angles = -np.arctan2(hull_edges[:, 1], hull_edges[:, 0])
+    hull_angles = np.arctan2(hull_edges[:, 1], hull_edges[:, 0])
     hull_angles = np.unique(hull_angles)
 
-    # Generate rotation matrix for each edge angle.
+    # Generate rotation matrix for each edge angle to
+    # have an edge parallel to horizontal axis.
     rotation_matrix = np.vstack((
-        np.cos(hull_angles),
-        -np.sin(hull_angles),
-        np.sin(hull_angles),
-        np.cos(hull_angles)
+        np.cos(-hull_angles),
+        -np.sin(-hull_angles),
+        np.sin(-hull_angles),
+        np.cos(-hull_angles)
     ))
     rotation_matrix = rotation_matrix.T.reshape(-1, 2, 2)
 
@@ -81,16 +81,24 @@ def minimum_bounding_box(points):
     best_max_x = max_x[best_area_idx]
     best_min_y = min_y[best_area_idx]
     best_max_y = max_y[best_area_idx]
-    best_rotation_matrix = rotation_matrix[best_area_idx]
+    best_angle = hull_angles[best_area_idx]
+
+    # TODO: this can be further optimized by reusing
+    # the previous rotation_matrix.
+    rotate_back_matrix = np.asarray([
+        [cos(best_angle), -sin(best_angle)],
+        [sin(best_angle), cos(best_angle)]
+    ])
 
     # Rotate the points back to original orientation.
-    min_rect = np.zeros((4, 2))
-    min_rect[0] = np.array([best_min_x, best_max_y]) @ best_rotation_matrix
-    min_rect[1] = np.array([best_max_x, best_max_y]) @ best_rotation_matrix
-    min_rect[2] = np.array([best_max_x, best_min_y]) @ best_rotation_matrix
-    min_rect[3] = np.array([best_min_x, best_min_y]) @ best_rotation_matrix
+    min_rect = np.asarray([
+        [best_min_x, best_max_y],
+        [best_max_x, best_max_y],
+        [best_max_x, best_min_y],
+        [best_min_x, best_min_y]
+    ]) @ rotate_back_matrix.T
 
-    return min_rect, hull_angles[best_area_idx]
+    return min_rect, best_angle
 
 
 def crop_polygon(points, crop_region):
