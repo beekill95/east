@@ -313,7 +313,6 @@ class PreprocessingSequence(Sequence):
         preprocessed_gts = []
 
         for i in range(len(images)):
-            print(f'{i}')
             r = self._preprocessing_fn(images[i], groundtruths[i])
             gt = generate_ground_truth(r[0], r[1])
 
