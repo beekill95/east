@@ -189,12 +189,11 @@ def generate_ground_truth(image, text_boxes, score_map_offset=5):
             p = shrinked_text_boxes[i].flatten().tolist()
             draw.polygon(p, fill=(i+1))
 
-        return np.asarray(canvas)
+        return np.asarray(canvas)[::4, ::4]
 
     def generate_score_map(shrinked_text_boxes_img):
         score_map = shrinked_text_boxes_img.astype(np.float32)
         score_map[score_map > 0] = 1
-        score_map = score_map[::4, ::4]
         return np.expand_dims(score_map, axis=0)
 
     def calculate_rotation_angle(rectangular):
@@ -213,13 +212,13 @@ def generate_ground_truth(image, text_boxes, score_map_offset=5):
     def generate_geometry_map(shrinked_text_boxes_img):
         # FIXME: handle the case when boxes are triangular, in that case,
         # minimum bounding boxes might be wrong.
-        min_bboxes = (geometry.minimum_bounding_box(box) for box in text_boxes)
+        min_bboxes = [geometry.minimum_bounding_box(box) for box in text_boxes]
         min_bboxes = ((box, calculate_rotation_angle(box))
                       for box, _ in min_bboxes)
         min_bboxes = list(min_bboxes)
 
         img_height, img_width, _ = np.shape(image)
-        geometry_map = np.zeros((5, img_height, img_width))
+        geometry_map = np.zeros((5,) + shrinked_text_boxes_img.shape)
 
         non_zero_x, non_zero_y = np.nonzero(shrinked_text_boxes_img)
         for i in range(len(non_zero_x)):
@@ -229,10 +228,10 @@ def generate_ground_truth(image, text_boxes, score_map_offset=5):
             bbox, angle = min_bboxes[color - 1]
 
             # AABB & angle.
-            geometry_map[:4, r, c] = rbox.generate_rbox((r, c), bbox)
+            geometry_map[:4, r, c] = rbox.generate_rbox((r * 4, c * 4), bbox)
             geometry_map[4, r, c] = angle
 
-        return geometry_map[:, ::4, ::4]
+        return geometry_map
 
     shrinked_text_boxes_img = draw_shrinked_text_boxes(score_map_offset)
 
@@ -314,6 +313,7 @@ class PreprocessingSequence(Sequence):
         preprocessed_gts = []
 
         for i in range(len(images)):
+            print(f'{i}')
             r = self._preprocessing_fn(images[i], groundtruths[i])
             gt = generate_ground_truth(r[0], r[1])
 
