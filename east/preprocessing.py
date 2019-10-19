@@ -174,7 +174,7 @@ def pad_image(target_size, image, text_boxes):
     return padded_img, text_boxes
 
 
-def generate_ground_truth(image, text_boxes, score_map_offset=30):
+def generate_ground_truth(image, text_boxes, score_map_offset=5):
     # FIXME: the offset should be changed accordingly to the size of the box,
     # or else the offsetted polygon would fall outside of the box.
     def draw_shrinked_text_boxes(offset):
