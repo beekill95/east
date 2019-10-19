@@ -43,7 +43,7 @@ def minimum_bounding_box(points):
 
     :param points: a numpy matrix of nx2 coordinates of points.
     :return: a tuple of:
-      * a numpy matrix of nx2 coordinates of 4 vertices of rotated enclosing box.
+      * a numpy matrix of nx2 coordinates of 4 vertices of rotated enclosing box in clockwise order.
       * rotation angle.
     """
     hull_vertices = points[ConvexHull(points).vertices]
@@ -92,10 +92,10 @@ def minimum_bounding_box(points):
 
     # Rotate the points back to original orientation.
     min_rect = np.asarray([
+        [best_min_x, best_min_y]
         [best_min_x, best_max_y],
         [best_max_x, best_max_y],
         [best_max_x, best_min_y],
-        [best_min_x, best_min_y]
     ]) @ rotate_back_matrix.T
 
     return min_rect, best_angle

@@ -1,7 +1,7 @@
 import east.geometry as geometry
 import east.rbox as rbox
 from functools import partial, reduce
-from math import cos, sin, pi
+from math import cos, sin, pi, atan
 import numpy as np
 from PIL import Image, ImageDraw
 import random
@@ -197,10 +197,26 @@ def generate_ground_truth(image, text_boxes, score_map_offset=30):
         score_map = score_map[::4, ::4]
         return np.expand_dims(score_map, axis=0)
 
+    def calculate_rotation_angle(rectangular):
+        """
+        Calculate the rotation angle of a rectangular, based on the longer edge.
+        |rectangular| is a 4x2 numpy array.
+        """
+        first_edge = rectangular[1] - rectangular[0]
+        second_edge = rectangular[0] - rectangular[-1]
+
+        if geometry.magnitude(first_edge) > geometry.magnitude(second_edge):
+            return atan(first_edge[1] / first_edge[0])
+        else:
+            return atan(second_edge[1] / second_edge[0])
+
     def generate_geometry_map(shrinked_text_boxes_img):
         # FIXME: handle the case when boxes are triangular, in that case,
         # minimum bounding boxes might be wrong.
-        min_bboxes = [geometry.minimum_bounding_box(box) for box in text_boxes]
+        min_bboxes = (geometry.minimum_bounding_box(box) for box in text_boxes)
+        min_bboxes = ((box, calculate_rotation_angle(box))
+                      for box, _ in min_bboxes)
+        min_bboxes = list(min_bboxes)
 
         img_height, img_width, _ = np.shape(image)
         geometry_map = np.zeros((5, img_height, img_width))
