@@ -37,10 +37,10 @@ def decode_rbox(pixel, distances):
     right = x + right_d
 
     return np.array([
-        [left, bottom]
+        [left, bottom],
         [left, top],
         [right, top],
-        [right, bottom],
+        [right, bottom]
     ])
 
 
