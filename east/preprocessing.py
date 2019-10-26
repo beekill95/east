@@ -1,9 +1,8 @@
-import east.geometry as geometry
-import east.rbox as rbox
+from east import groundtruth, geometry
 from functools import partial, reduce
-from math import cos, sin, pi, atan
+from math import pi
 import numpy as np
-from PIL import Image, ImageDraw
+from PIL import Image
 import random
 from tensorflow.python.keras.utils.data_utils import Sequence
 
@@ -174,74 +173,6 @@ def pad_image(target_size, image, text_boxes):
     return padded_img, text_boxes
 
 
-def generate_ground_truth(image, text_boxes, score_map_offset=5):
-    # FIXME: the offset should be changed accordingly to the size of the box,
-    # or else the offsetted polygon would fall outside of the box.
-    def draw_shrinked_text_boxes(offset):
-        img_height, img_width, _ = np.shape(image)
-
-        shrinked_text_boxes = [
-            geometry.shrink_polygon(box, offset) for box in text_boxes]
-
-        canvas = Image.new("L", (img_width, img_height))
-        draw = ImageDraw.Draw(canvas)
-        for i in range(len(text_boxes)):
-            p = shrinked_text_boxes[i].flatten().tolist()
-            draw.polygon(p, fill=(i+1))
-
-        return np.asarray(canvas)[::4, ::4]
-
-    def generate_score_map(shrinked_text_boxes_img):
-        score_map = shrinked_text_boxes_img.astype(np.float32)
-        score_map[score_map > 0] = 1
-        return np.expand_dims(score_map, axis=0)
-
-    def calculate_rotation_angle(rectangular):
-        """
-        Calculate the rotation angle of a rectangular, based on the longer edge.
-        |rectangular| is a 4x2 numpy array.
-        """
-        first_edge = rectangular[1] - rectangular[0]
-        second_edge = rectangular[0] - rectangular[-1]
-
-        if geometry.magnitude(first_edge) > geometry.magnitude(second_edge):
-            return atan(first_edge[1] / first_edge[0])
-        else:
-            return atan(second_edge[1] / second_edge[0])
-
-    def generate_geometry_map(shrinked_text_boxes_img):
-        # FIXME: handle the case when boxes are triangular, in that case,
-        # minimum bounding boxes might be wrong.
-        min_bboxes = [geometry.minimum_bounding_box(box) for box in text_boxes]
-        min_bboxes = ((box, calculate_rotation_angle(box))
-                      for box, _ in min_bboxes)
-        min_bboxes = list(min_bboxes)
-
-        img_height, img_width, _ = np.shape(image)
-        geometry_map = np.zeros((5,) + shrinked_text_boxes_img.shape)
-
-        non_zero_x, non_zero_y = np.nonzero(shrinked_text_boxes_img)
-        for i in range(len(non_zero_x)):
-            r, c = non_zero_x[i], non_zero_y[i]
-
-            color = shrinked_text_boxes_img[r, c]
-            bbox, angle = min_bboxes[color - 1]
-
-            # AABB & angle.
-            geometry_map[:4, r, c] = rbox.generate_rbox((r * 4, c * 4), bbox)
-            geometry_map[4, r, c] = angle
-
-        return geometry_map
-
-    shrinked_text_boxes_img = draw_shrinked_text_boxes(score_map_offset)
-
-    # FIXME: we should filtered out boxes that are too small.
-    score_map = generate_score_map(shrinked_text_boxes_img)
-    geometry_map = generate_geometry_map(shrinked_text_boxes_img)
-    gt_map = np.concatenate((score_map, geometry_map), axis=0)
-    return np.moveaxis(gt_map, 0, -1)
-
-
 def process_data(pipeline, image, text_boxes):
     pil_img = Image.fromarray(image)
     np_text_boxes = [np.asarray(box[1:]).reshape(-1, 2)
@@ -277,7 +208,7 @@ def flow_from_generator(data_iter, processing_pipeline):
                           for d in zip(data[0], data[1]))
 
         for d in processed_data:
-            gt = generate_ground_truth(d[0], d[1])
+            gt = groundtruth.generate_ground_truth(d[0], d[1])
 
             images.append(d[0])
             gts.append(gt)
@@ -314,7 +245,7 @@ class PreprocessingSequence(Sequence):
 
         for i in range(len(images)):
             r = self._preprocessing_fn(images[i], groundtruths[i])
-            gt = generate_ground_truth(r[0], r[1])
+            gt = groundtruth.generate_ground_truth(r[0], r[1])
 
             preprocessed_images.append(r[0])
             preprocessed_gts.append(gt)

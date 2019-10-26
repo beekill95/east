@@ -2,6 +2,53 @@ from east.geometry import euclidean_distance_point_line
 import numpy as np
 
 
+def generate_rbox_np(locations, bounding_boxes, mask):
+    """
+    Generate RBOX, but works on numpy arrays.
+
+    :param locations: a 2xNxN numpy array stores the (x, y) coordinate of a pixel.
+    :param bounding_boxes: a 8xNxN array stores the (x, y) coordinates of 4 vertices
+    in clockwise order, starting from bottom left, of the bounding boxes.
+    :param mask: a NxN numpy mask stores which location should be considered to generate rbox.
+    :return: a 4xNxN numpy array store the distances of pixels in |locations| to corresponding
+    edges in |bounding_boxes|. The distances are in order (left, top, right, bottom).
+    """
+    def dot(a, b):
+        """
+        Calculate the dot product of two 2xnxm numpy matrices, at a specific mask only.
+        """
+        product = np.multiply(a, b)
+        return np.sum(product, axis=0)
+
+    def euclidean_distance_np(locs, edges, out, mask):
+        """
+        Calculate the distance between 2xnxm locations with 2xnxm edges, at specific nxm mask only.
+        """
+        # Find the projection of the locs onto the edges.
+        ratio = np.zeros(mask.shape)
+        np.divide(dot(locs, edges), dot(edges, edges),
+                  out=ratio, where=mask)
+        projection = ratio * edges
+
+        # Find the distance between the locs and its projections.
+        b = locs - projection
+        np.sqrt(dot(b, b), out=out, where=mask)
+
+    edges = np.zeros((8,) + mask.shape)
+    distances = np.zeros((4,) + mask.shape)
+
+    # Edges.
+    edges[:6, :, :] = bounding_boxes[:6, :, :] - bounding_boxes[2:, :, :]
+    edges[6:8, :, :] = bounding_boxes[6:8, :, :] - bounding_boxes[:2, :, :]
+
+    # Calculate the distances.
+    for i in range(4):
+        edge = edges[i*2:(i+1)*2]
+        euclidean_distance_np(locations, edge, distances[i], mask)
+
+    return distances
+
+
 def generate_rbox(pixel, bounding_box):
     """
     Generate RBOX.
@@ -13,8 +60,7 @@ def generate_rbox(pixel, bounding_box):
     to 4 edges in order (left, top, right, bottom).
     """
     assert len(bounding_box) == 4
-    ordered_box = _reorder_vertices(bounding_box)
-    edges = (ordered_box[i] - ordered_box[(i + 1) % 4] for i in range(4))
+    edges = (bounding_box[i] - bounding_box[(i + 1) % 4] for i in range(4))
     distances = (euclidean_distance_point_line(pixel, edge) for edge in edges)
     return np.asarray(list(distances))
 
@@ -42,12 +88,3 @@ def decode_rbox(pixel, distances):
         [right, top],
         [right, bottom]
     ])
-
-
-def _reorder_vertices(rectangular):
-    """
-    Reorder vertices in clock-wise order, with bottom-left vertices first.
-    """
-    s = rectangular[:, 0] + rectangular[:, 1]
-    min_s_idx = np.argmin(s)
-    return [rectangular[(min_s_idx + i) % 4] for i in range(4)]
