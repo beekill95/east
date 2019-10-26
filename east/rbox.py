@@ -38,8 +38,8 @@ def generate_rbox_np(locations, bounding_boxes, mask):
     distances = np.zeros((4,) + mask.shape)
 
     # Edges.
-    edges[:6, :, :] = bounding_boxes[:6, :, :] - bounding_boxes[2:, :, :]
-    edges[6:8, :, :] = bounding_boxes[6:8, :, :] - bounding_boxes[:2, :, :]
+    edges[:6] = bounding_boxes[:6] - bounding_boxes[2:]
+    edges[6:8] = bounding_boxes[6:8] - bounding_boxes[:2]
 
     # Calculate the distances.
     for i in range(4):

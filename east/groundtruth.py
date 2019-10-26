@@ -89,19 +89,18 @@ def _generate_geometry_map_np(shrinked_text_boxes_img, text_boxes):
         # bboxes[mask] = min_bbox.flatten()
         # FIXME: don't use loop, use numpy broadcast to do the job.
         flatten_min_bbox = min_bbox.flatten()
-        for i in range(len(flatten_min_bbox)):
+        for i in range(8):
             bboxes[i][mask] = flatten_min_bbox[i]
 
         # Asign angles to geometry map.
-        geometry_map[4, :, :][mask] = _calculate_rotation_angle(min_bbox)
+        geometry_map[4][mask] = _calculate_rotation_angle(min_bbox)
 
     location_mask = shrinked_text_boxes_img > 0
     xv, yv = np.meshgrid(np.arange(0, img_shape[0]),
                          np.arange(0, img_shape[1]))
-    locations = np.stack([xv, yv]) * 4
+    locations = np.stack([yv, xv]) * 4
 
-    geometry_map[:4, :, :] = rbox.generate_rbox_np(
-        locations, bboxes, location_mask)
+    geometry_map[:4] = rbox.generate_rbox_np(locations, bboxes, location_mask)
 
     return geometry_map
 
