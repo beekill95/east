@@ -5,6 +5,7 @@ import numpy as np
 from PIL import Image
 import random
 from tensorflow.python.keras.utils.data_utils import Sequence
+import warnings
 
 
 def random_scale(scales, image, text_boxes):
@@ -119,16 +120,27 @@ def random_crop_with_text_boxes_cropped(target_size, at_least_one_box_ratio, ima
                 end_y = end_y if end_y > 0 else int(max_y)
                 y_box_region[start_y:end_y] |= 1 << i
 
-            # FIXME: this selection process will be bias toward
-            # long and tall boxes.
-            good_x = np.nonzero(x_box_region)[0]
-            chosen_x = np.random.choice(good_x)
-            chosen_x_val = x_box_region[chosen_x]
+            # FIXME: find the exact cause why sometimes the above for loop
+            # produce empty array |good_x| and/or |good_y|.
+            try:
+                # FIXME: this selection process will be bias toward
+                # long and tall boxes.
+                good_x = np.nonzero(x_box_region)[0]
+                chosen_x = np.random.choice(good_x)
+                chosen_x_val = x_box_region[chosen_x]
 
-            good_y = np.nonzero(y_box_region & chosen_x_val)[0]
-            chosen_y = np.random.choice(good_y)
+                good_y = np.nonzero(y_box_region & chosen_x_val)[0]
+                chosen_y = np.random.choice(good_y)
 
-            return chosen_x, chosen_y
+                return chosen_x, chosen_y
+            except ValueError as e:
+                warnings.warn(
+                    'Cannot find good crop start. Revert back to random selection.', RuntimeWarning)
+                return find_good_crop_start(img_width,
+                                            img_height,
+                                            target_width,
+                                            target_height,
+                                            0)
 
     img_width, img_height = image.size
     target_width, target_height = target_size
