@@ -1,4 +1,4 @@
-from east.geometry import euclidean_distance_point_line
+from east.geometry import euclidean_distance_vector_vector
 import numpy as np
 
 
@@ -43,8 +43,10 @@ def generate_rbox_np(locations, bounding_boxes, mask):
 
     # Calculate the distances.
     for i in range(4):
-        edge = edges[i*2:(i+1)*2]
-        euclidean_distance_np(locations, edge, distances[i], mask)
+        euclidean_distance_np(locations - bounding_boxes[i*2:(i+1)*2],
+                              edges[i*2:(i+1)*2],
+                              distances[i],
+                              mask)
 
     return distances
 
@@ -60,8 +62,9 @@ def generate_rbox(pixel, bounding_box):
     to 4 edges in order (left, top, right, bottom).
     """
     assert len(bounding_box) == 4
-    edges = (bounding_box[i] - bounding_box[(i + 1) % 4] for i in range(4))
-    distances = (euclidean_distance_point_line(pixel, edge) for edge in edges)
+    distances = (euclidean_distance_vector_vector(pixel - bounding_box[i],
+                                                  bounding_box[i] - bounding_box[(i + 1) % 4])
+                 for i in range(4))
     return np.asarray(list(distances))
 
 
@@ -77,8 +80,8 @@ def decode_rbox(pixel, distances):
     x, y = pixel
     left_d, top_d, right_d, bottom_d = distances
 
-    top = y - top_d
-    bottom = y + bottom_d
+    top = y + top_d
+    bottom = y - bottom_d
     left = x - left_d
     right = x + right_d
 

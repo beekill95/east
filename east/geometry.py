@@ -13,9 +13,9 @@ def euclidean_distance(u, v):
     return magnitude(u - v)
 
 
-def euclidean_distance_point_line(point, line):
-    projection = np.dot(point, line) / np.dot(line, line) * line
-    return euclidean_distance(point, projection)
+def euclidean_distance_vector_vector(v, u):
+    projection = np.dot(v, u) / np.dot(u, u) * u
+    return euclidean_distance(v, projection)
 
 
 def rotate_polygon(polygon, angle, anchor=None):
