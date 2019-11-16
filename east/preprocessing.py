@@ -1,3 +1,7 @@
+"""
+Pre process images and convert groundtruth into expected output
+by the model to train.
+"""
 from east import groundtruth, geometry
 from functools import partial, reduce
 from math import pi

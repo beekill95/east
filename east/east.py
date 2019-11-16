@@ -69,8 +69,17 @@ class EAST:
                                        validation_data=validation_generator,
                                        validation_steps=validation_steps_per_epoch)
 
-    def predict(self, image, score_map_threshold=0.5):
+    def predict(self, images, score_map_threshold=0.5):
+        """
+        Predict the bounding boxes for texts in this image.
+
+        :param images: a numpy array contains images to be predicted, shape: batch x n x n x 3
+        :return: a numpy array of network prediction of size: batch * (n / 4) * (n / 4) * 5.
+        With the first 4 are distances to bounding box, the last one is the rotation angle of
+        the bounding box.
+        """
         self._assert_model_initialized()
+        return self._east_model.predict(images)
 
     def _build_base_network(self, input_shape):
         self._input = keras.Input(shape=input_shape)
