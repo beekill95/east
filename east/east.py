@@ -1,10 +1,10 @@
 from east.loss import rbox_geometry_loss, score_map_loss
 from east.rbox import decode_rbox
+from math import pi
 from tensorflow import keras as keras
 from tensorflow.python.keras import backend as K
 
 
-# TODO: allow save checkpoints after each n epochs
 class EAST:
     def __init__(self, training=False):
         self._training = training
@@ -99,13 +99,18 @@ class EAST:
 
         if output_geometry == 'RBOX':
             # 4 filters for aabb coordinates, last filter for angle.
-            self._rbox_geometry = keras.layers.Conv2D(
-                filters=5, kernel_size=(1, 1), activation='softplus', name='rbox_coords')(feature)
+            angle = keras.layers.Conv2D(
+                filters=1, kernel_size=(1, 1), activation='sigmoid', name='rbox_angle')(feature)
+            geometry = keras.layers.Conv2D(
+                filters=4, kernel_size=(1, 1), activation='sigmoid', name='rbox_geometry')(feature)
 
+            angle = angle * 2 * pi
+
+            self._rbox_geometry = keras.layers.concatenate([angle, geometry])
             return keras.layers.concatenate([self._scores, self._rbox_geometry])
         elif output_geometry == 'QUAD':
-            self._quad_geometry = keras.layers.Conv2D(
-                filters=8, kernel_size=(1, 1), activation='softplus', name='quad_coords')(feature)
+            self._quad_coords = keras.layers.Conv2D(
+                filters=8, kernel_size=(1, 1), activation='sigmoid', name='quad_coords')(feature)
 
             return keras.layers.concatenate([self._scores, self._quad_coords])
 

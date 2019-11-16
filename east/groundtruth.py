@@ -56,7 +56,8 @@ def _generate_geometry_map(shrinked_text_boxes_img, text_boxes):
                   for box, _ in min_bboxes)
     min_bboxes = list(min_bboxes)
 
-    geometry_map = np.zeros((5,) + shrinked_text_boxes_img.shape)
+    img_shape = shrinked_text_boxes_img.shape
+    geometry_map = np.zeros((5,) + img_shape)
 
     non_zero_rows, non_zero_cols = np.nonzero(shrinked_text_boxes_img)
     for i in range(len(non_zero_rows)):
@@ -66,7 +67,8 @@ def _generate_geometry_map(shrinked_text_boxes_img, text_boxes):
         bbox, angle = min_bboxes[color - 1]
 
         # AABB & angle.
-        geometry_map[:4, r, c] = rbox.generate_rbox((c * 4, r * 4), bbox)
+        geometry_map[:4, r, c] = rbox.generate_rbox(
+            (c * 4, r * 4), bbox, (img_shape[0] * 4, img_shape[1] * 4))
         geometry_map[4, r, c] = angle
 
     return geometry_map
@@ -100,7 +102,8 @@ def _generate_geometry_map_np(shrinked_text_boxes_img, text_boxes):
                          np.arange(0, img_shape[1]))
     locations = np.stack([xv, yv]) * 4
 
-    geometry_map[:4] = rbox.generate_rbox_np(locations, bboxes, location_mask)
+    geometry_map[:4] = rbox.generate_rbox_np(
+        locations, bboxes, location_mask, (img_shape[0] * 4, img_shape[1] * 4))
 
     return geometry_map
 

@@ -2,7 +2,7 @@ from east.geometry import euclidean_distance_vector_vector
 import numpy as np
 
 
-def generate_rbox_np(locations, bounding_boxes, mask):
+def generate_rbox_np(locations, bounding_boxes, mask, orig_img_size):
     """
     Generate RBOX, but works on numpy arrays.
 
@@ -10,6 +10,7 @@ def generate_rbox_np(locations, bounding_boxes, mask):
     :param bounding_boxes: a 8xNxN array stores the (x, y) coordinates of 4 vertices
     in clockwise order, starting from bottom left, of the bounding boxes.
     :param mask: a NxN numpy mask stores which location should be considered to generate rbox.
+    :param orig_img_size: size (width, height) of the original image.
     :return: a 4xNxN numpy array store the distances of pixels in |locations| to corresponding
     edges in |bounding_boxes|. The distances are in order (left, top, right, bottom).
     """
@@ -36,6 +37,7 @@ def generate_rbox_np(locations, bounding_boxes, mask):
 
     edges = np.zeros((8,) + mask.shape)
     distances = np.zeros((4,) + mask.shape)
+    width, height = orig_img_size
 
     # Edges.
     edges[:6] = bounding_boxes[:6] - bounding_boxes[2:]
@@ -48,42 +50,50 @@ def generate_rbox_np(locations, bounding_boxes, mask):
                               distances[i],
                               mask)
 
+        distances[i] /= width if i % 2 == 0 else height
+
     return distances
 
 
-def generate_rbox(pixel, bounding_box):
+def generate_rbox(pixel, bounding_box, orig_img_size):
     """
     Generate RBOX.
 
     :param pixel: location of the pixel, (x, y).
     :param bounding_box: a numpy array of size 4x2 coordinates of 4 vertices
     of the bounding box in clockwise order.
+    :param orig_img_size: size (width, height) of the original image.
     :return a 1D numpy array of shape (4,) distance from current location
     to 4 edges in order (left, top, right, bottom).
     """
     assert len(bounding_box) == 4
+    width, height = orig_img_size
     distances = (euclidean_distance_vector_vector(pixel - bounding_box[i],
                                                   bounding_box[i] - bounding_box[(i + 1) % 4])
                  for i in range(4))
+    distances = ((d / (width if i % 2 == 0 else height))
+                 for i, d in enumerate(distances))
     return np.asarray(list(distances))
 
 
-def decode_rbox(pixel, distances):
+def decode_rbox(pixel, distances, orig_img_size):
     """
     Decode RBOX.
 
     :param pixel: location of the pixel, (x, y)
     :param distances: distance of the pixel to 4 edges (left, top, right, bottom).
+    :param orig_img_size: size (width, height) of the original image.
     :return: a numpy array of size 4x2 coordinates of 4 vertices of the bounding box
     in clockwise order, starting from top left corner.
     """
+    width, height = orig_img_size
     x, y = pixel
     left_d, top_d, right_d, bottom_d = distances
 
-    top = y + top_d
-    bottom = y - bottom_d
-    left = x - left_d
-    right = x + right_d
+    top = y + top_d * height
+    bottom = y - bottom_d * height
+    left = x - left_d * width
+    right = x + right_d * width
 
     return np.array([
         [left, bottom],
