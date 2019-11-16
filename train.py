@@ -3,6 +3,8 @@ from dataset import msra
 from east import east, preprocessing
 from functools import partial
 from tensorflow.python.keras.utils.data_utils import OrderedEnqueuer
+from tensorflow.python.keras.callbacks import TensorBoard, ModelCheckpoint
+import warnings
 
 
 def parse_arguments():
@@ -29,10 +31,24 @@ def parse_arguments():
                         type=int,
                         default=2,
                         help='Number of threads to run when doing preprocessing')
+    parser.add_argument('--checkpoint',
+                        action='store',
+                        help='''
+                        (Optional) Path to the directory to store the checkpoints as well as naming of the checkpoint.
+                        For more information, please check Keras API. If not present, checkpoints won't be saved.
+                        ''')
+    parser.add_argument('--tensorboard',
+                        action='store',
+                        help='''
+                        (Optional) Path to directory to store the tensorboard.
+                        If not present, tensorboard won't be saved.
+                        ''')
     parser.add_argument('--output',
                         action='store',
-                        required=True,
-                        help='Name of the output model, followed convention of Keras save api')
+                        help='''
+                        (Optional) Name of the output model, followed convention of Keras save api.
+                        If not present, final model won't be saved.
+                        ''')
 
     return parser.parse_args()
 
@@ -70,8 +86,35 @@ def build_training_data_enqueuer(training_seq):
     return enqueuer
 
 
+def build_training_callbacks(checkpoint_path, tensorboard_path):
+    callbacks = []
+
+    if checkpoint_path:
+        callbacks.append(
+            ModelCheckpoint(checkpoint_path,
+                            monitor='acc',
+                            save_weights_only=True)
+        )
+
+    if tensorboard_path:
+        callbacks.append(
+            TensorBoard(log_dir=tensorboard_path,
+                        write_graph=True,
+                        write_images=True,
+                        update_freq='epoch')
+        )
+
+    return callbacks
+
+
 if __name__ == "__main__":
     args = parse_arguments()
+
+    # Check if either checkpoints or output argument present.
+    if not args.checkpoint and not args.output:
+        warnings.warn(
+            'Neither checkpoint or output argument present, train model won\'t be saved!',
+            UserWarning)
 
     # Load the data.
     msra_seq = load_msra(args.msra_path, args.batch_size)
@@ -92,10 +135,14 @@ if __name__ == "__main__":
     try:
         print('===== Begin Training =====')
 
+        training_callbacks = build_training_callbacks(args.checkpoint,
+                                                      args.tensorboard)
+
         data_generator = enqueuer.get()
         east_model.train(data_generator,
                          train_steps_per_epoch=len(msra_seq),
-                         epochs=args.epochs)
+                         epochs=args.epochs,
+                         callbacks=training_callbacks)
 
         print('===== End Training =====')
     except KeyboardInterrupt:
@@ -105,4 +152,5 @@ if __name__ == "__main__":
     enqueuer.stop()
 
     # Save the model.
-    east_model.save_model(args.output)
+    if args.output:
+        east_model.save_model(args.output)
