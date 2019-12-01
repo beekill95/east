@@ -4,6 +4,7 @@ from math import pi
 import numpy as np
 from PIL import Image
 import random
+import traceback
 from tensorflow.python.keras.utils.data_utils import Sequence
 import warnings
 
@@ -102,7 +103,7 @@ def random_crop_with_text_boxes_cropped(target_size, at_least_one_box_ratio, ima
             # change to appear in the cropped region.
             num_text_boxes = len(text_boxes)
             box_indices = (np.arange(num_text_boxes) if num_text_boxes < 32
-                           else np.random.permutation(num_text_boxes)[:32])
+                           else np.random.permutation(num_text_boxes)[:31])
 
             for i in range(len(box_indices)):
                 text_box = text_boxes[box_indices[i]]
@@ -110,12 +111,14 @@ def random_crop_with_text_boxes_cropped(target_size, at_least_one_box_ratio, ima
                 min_x, max_x = np.min(text_box[:, 0]), np.max(text_box[:, 0])
                 min_y, max_y = np.min(text_box[:, 1]), np.max(text_box[:, 1])
 
-                start_x = max(int(min_x - target_width / 2), 0)
+                slack = 0.1
+
+                start_x = max(int(min_x - target_width * slack), 0)
                 end_x = int((min_x + max_x) / 2)
                 end_x = end_x if end_x > 0 else int(max_x)
                 x_box_region[start_x:end_x] |= 1 << i
 
-                start_y = max(int(min_y - target_height / 2), 0)
+                start_y = max(int(min_y - target_height * slack), 0)
                 end_y = int((min_y + max_y) / 2)
                 end_y = end_y if end_y > 0 else int(max_y)
                 y_box_region[start_y:end_y] |= 1 << i
@@ -123,17 +126,29 @@ def random_crop_with_text_boxes_cropped(target_size, at_least_one_box_ratio, ima
             # FIXME: find the exact cause why sometimes the above for loop
             # produce empty array |good_x| and/or |good_y|.
             try:
-                # FIXME: this selection process will be bias toward
-                # long and tall boxes.
-                good_x = np.nonzero(x_box_region)[0]
-                chosen_x = np.random.choice(good_x)
-                chosen_x_val = x_box_region[chosen_x]
+                unique_box_idx = np.unique(x_box_region)
+                unique_box_idx = unique_box_idx[unique_box_idx > 0]
 
-                good_y = np.nonzero(y_box_region & chosen_x_val)[0]
-                chosen_y = np.random.choice(good_y)
+                # TODO: should we introduce bias toward large idx to include
+                # more boxes in the crop region?
+                chosen_box_idx = np.random.choice(unique_box_idx)
+
+                good_x = np.nonzero(x_box_region & chosen_box_idx)[0]
+                good_y = np.nonzero(y_box_region & chosen_box_idx)[0]
+
+                # Geometric PMF.
+                p_success = 0.2
+                q = np.asarray([1 - p_success])
+                x_pmf = (p_success * np.power(q, np.arange(len(good_x))))
+                y_pmf = (p_success * np.power(q, np.arange(len(good_y))))
+
+                chosen_x = np.random.choice(good_x, p=x_pmf / np.sum(x_pmf))
+                chosen_y = np.random.choice(good_y, p=y_pmf / np.sum(y_pmf))
 
                 return chosen_x, chosen_y
             except ValueError as e:
+                traceback.print_exc()
+
                 warnings.warn(
                     'Cannot find good crop start. Revert back to random selection.', RuntimeWarning)
                 return find_good_crop_start(img_width,
