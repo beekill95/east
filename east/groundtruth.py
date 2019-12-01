@@ -9,7 +9,7 @@ def _reorder_vertices(rectangular):
     Reorder vertices in clock-wise order, with bottom-left vertices first.
     """
     s = rectangular[:, 0] + rectangular[:, 1]
-    min_s_idx = np.argmin(s)
+    min_s_idx = np.argmin(s) - 1
     return np.asarray([rectangular[(min_s_idx + i) % 4] for i in range(4)])
 
 
@@ -40,7 +40,7 @@ def _calculate_rotation_angle(rectangular):
     |rectangular| is a 4x2 numpy array.
     """
     first_edge = rectangular[1] - rectangular[0]
-    second_edge = rectangular[0] - rectangular[-1]
+    second_edge = rectangular[-1] - rectangular[0]
 
     if geometry.magnitude(first_edge) > geometry.magnitude(second_edge):
         return atan(first_edge[1] / first_edge[0])
@@ -87,14 +87,14 @@ def _generate_geometry_map_np(shrinked_text_boxes_img, text_boxes):
 
         mask = shrinked_text_boxes_img == i + 1
 
-        # Asign bbox coordinates.
+        # Assign bbox coordinates.
         # bboxes[mask] = min_bbox.flatten()
         # FIXME: don't use loop, use numpy broadcast to do the job.
         flatten_min_bbox = min_bbox.flatten()
         for i in range(8):
             bboxes[i][mask] = flatten_min_bbox[i]
 
-        # Asign angles to geometry map.
+        # Assign angles to geometry map.
         geometry_map[4][mask] = _calculate_rotation_angle(min_bbox)
 
     location_mask = shrinked_text_boxes_img > 0
@@ -108,7 +108,7 @@ def _generate_geometry_map_np(shrinked_text_boxes_img, text_boxes):
     return geometry_map
 
 
-def generate_ground_truth(image, text_boxes, score_map_offset=5):
+def generate_ground_truth(image, text_boxes, score_map_offset=10):
     # FIXME: the offset should be changed accordingly to the size of the box,
     # or else the offsetted polygon would fall outside of the box.
     shrinked_text_boxes_img = _draw_shrinked_text_boxes(
