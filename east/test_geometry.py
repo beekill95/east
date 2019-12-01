@@ -18,10 +18,10 @@ def test_minimum_bounding_box():
     ]))
 
     assert np.allclose(box, np.array([
-        [0, 1],
-        [3, 1],
+        [0, 0],
         [3, 0],
-        [0, 0]
+        [3, 1],
+        [0, 1],
     ]))
     assert angle == 0
 
