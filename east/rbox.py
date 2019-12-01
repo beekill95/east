@@ -90,8 +90,8 @@ def decode_rbox(pixel, distances, orig_img_size):
     x, y = pixel
     left_d, top_d, right_d, bottom_d = distances
 
-    top = y + top_d * height
-    bottom = y - bottom_d * height
+    top = y - top_d * height
+    bottom = y + bottom_d * height
     left = x - left_d * width
     right = x + right_d * width
 
