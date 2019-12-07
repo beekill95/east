@@ -23,10 +23,9 @@ class EAST:
         self._east_model = keras.Model(self._base_network.input, output)
 
         if self._training:
-            self._east_model.compile(
-                optimizer='adam',
-                loss=self._total_loss(),
-                metrics=['accuracy'])
+            self._east_model.compile(optimizer='adam',
+                                     loss=self._total_loss(),
+                                     metrics=['accuracy'])
 
     def load_model(self, weight_path):
         self._assert_model_initialized()
@@ -55,21 +54,21 @@ class EAST:
         self._assert_model_initialized()
         assert self._training, "EAST model is not initialized to be trained"
 
-        self._east_model.fit_generator(
-            train_generator,
-            train_steps_per_epoch,
-            epochs,
-            verbosity,
-            callbacks,
-            validation_data=validation_generator,
-            validation_steps=validation_steps_per_epoch)
+        self._east_model.fit_generator(train_generator,
+                                       train_steps_per_epoch,
+                                       epochs,
+                                       verbosity,
+                                       callbacks,
+                                       validation_data=validation_generator,
+                                       validation_steps=validation_steps_per_epoch)
 
     def predict(self, image, score_map_threshold=0.5):
         self._assert_model_initialized()
 
     def _build_base_network(self, input_shape):
-        self._base_network = keras.applications.ResNet50(
-            include_top=False, weights='imagenet', input_shape=input_shape)
+        self._base_network = keras.applications.ResNet50(include_top=False,
+                                                         weights='imagenet',
+                                                         input_shape=input_shape)
 
         # Freeze base network weights.
         self._base_network.trainable = False
@@ -80,14 +79,18 @@ class EAST:
         self._stage_4 = get_output_tensor(self._base_network, 'activation_48')
 
     def _build_feature_merging_blocks(self):
-        self._block_1 = EAST._feature_merging_block(
-            self._stage_4, self._stage_3, 128)
-        self._block_2 = EAST._feature_merging_block(
-            self._block_1, self._stage_2, 64)
-        self._block_3 = EAST._feature_merging_block(
-            self._block_2, self._stage_1, 32)
+        self._block_1 = EAST._feature_merging_block(self._stage_4,
+                                                    self._stage_3, 128)
+        self._block_2 = EAST._feature_merging_block(self._block_1,
+                                                    self._stage_2, 64)
+        self._block_3 = EAST._feature_merging_block(self._block_2,
+                                                    self._stage_1, 32)
         self._block_4 = keras.layers.Conv2D(
-            filters=32, kernel_size=(3, 3), activation='relu', padding='same')(self._block_3)
+            filters=32,
+            kernel_size=(3, 3),
+            activation='relu',
+            padding='same'
+        )(self._block_3)
 
     def _build_output_layers(self, output_geometry):
         self._output_geometry = output_geometry
@@ -95,14 +98,26 @@ class EAST:
 
         # Scores.
         self._scores = keras.layers.Conv2D(
-            filters=1, kernel_size=(1, 1), activation='sigmoid', name='scores')(feature)
+            filters=1,
+            kernel_size=(1, 1),
+            activation='sigmoid',
+            name='scores'
+        )(feature)
 
         if output_geometry == 'RBOX':
             # 4 filters for aabb coordinates, last filter for angle.
             angle = keras.layers.Conv2D(
-                filters=1, kernel_size=(1, 1), activation='sigmoid', name='rbox_angle')(feature)
+                filters=1,
+                kernel_size=(1, 1),
+                activation='sigmoid',
+                name='rbox_angle'
+            )(feature)
             geometry = keras.layers.Conv2D(
-                filters=4, kernel_size=(1, 1), activation='sigmoid', name='rbox_geometry')(feature)
+                filters=4,
+                kernel_size=(1, 1),
+                activation='sigmoid',
+                name='rbox_geometry'
+            )(feature)
 
             angle = angle * 2 * pi
 
@@ -110,13 +125,16 @@ class EAST:
             return keras.layers.concatenate([self._scores, self._rbox_geometry])
         elif output_geometry == 'QUAD':
             self._quad_coords = keras.layers.Conv2D(
-                filters=8, kernel_size=(1, 1), activation='sigmoid', name='quad_coords')(feature)
+                filters=8,
+                kernel_size=(1, 1),
+                activation='sigmoid',
+                name='quad_coords'
+            )(feature)
 
             return keras.layers.concatenate([self._scores, self._quad_coords])
 
-        raise ValueError(
-            f'Unknown geometry type {output_geometry} for EAST detector.'
-            'Available geometries are RBOX and QUAD')
+        raise ValueError(f'Unknown geometry type {output_geometry} for EAST detector.'
+                         'Available geometries are RBOX and QUAD')
 
     def _total_loss(self, geometry_lambda=1):
         assert self._output_geometry == 'RBOX', f'{self._output_geometry} loss is not implemented'
@@ -128,8 +146,8 @@ class EAST:
                 gt_rbox_geometry = y_true[:, :, :, 1:]
                 pred_rbox_geometry = y_pred[:, :, :, 1:]
 
-                geometry_loss = rbox_geometry_loss(
-                    gt_rbox_geometry, pred_rbox_geometry)
+                geometry_loss = rbox_geometry_loss(gt_rbox_geometry,
+                                                   pred_rbox_geometry)
 
             return K.mean(score_loss + geometry_lambda * geometry_loss, axis=[1, 2])
 
@@ -142,10 +160,20 @@ class EAST:
     def _feature_merging_block(input_tensor, concat_tensor, filters):
         unpooled_tensor = unpool_layer(input_tensor)
         concated_tensor = concat_layer(unpooled_tensor, concat_tensor)
+
         conv_1 = keras.layers.Conv2D(
-            filters=filters, kernel_size=(1, 1), activation='relu', padding='same')(concated_tensor)
+            filters=filters,
+            kernel_size=(1, 1),
+            activation='relu',
+            padding='same'
+        )(concated_tensor)
+
         conv_3 = keras.layers.Conv2D(
-            filters=filters, kernel_size=(3, 3), activation='relu', padding='same')(conv_1)
+            filters=filters,
+            kernel_size=(3, 3),
+            activation='relu',
+            padding='same'
+        )(conv_1)
 
         return conv_3
 

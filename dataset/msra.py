@@ -53,8 +53,8 @@ class MSRA:
             gt_path = _full_path(self._data_set_path, _gt_file(img_file))
 
             gt = _load_gt(gt_path)
-            box_coordinates = [
-                g[:1] + _convert_geometry_to_coordinates(g[1:]) for g in gt]
+            box_coordinates = [g[:1] + _convert_geometry_to_coordinates(g[1:])
+                               for g in gt]
 
             images.append(_load_img(img_path))
             gts.append(box_coordinates)
@@ -104,8 +104,8 @@ class MSRASequence(Sequence):
             gt_path = _full_path(self._msra_path, _gt_file(img_file))
 
             gt = _load_gt(gt_path)
-            box_coordinates = [
-                g[:1] + _convert_geometry_to_coordinates(g[1:]) for g in gt]
+            box_coordinates = [g[:1] + _convert_geometry_to_coordinates(g[1:])
+                               for g in gt]
 
             return _load_img(img_path), box_coordinates
 

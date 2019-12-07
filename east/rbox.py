@@ -27,8 +27,10 @@ def generate_rbox_np(locations, bounding_boxes, mask, orig_img_size):
         """
         # Find the projection of the locs onto the edges.
         ratio = np.zeros(mask.shape)
-        np.divide(dot(locs, edges), dot(edges, edges),
-                  out=ratio, where=mask)
+        np.divide(dot(locs, edges),
+                  dot(edges, edges),
+                  out=ratio,
+                  where=mask)
         projection = ratio * edges
 
         # Find the distance between the locs and its projections.

@@ -176,7 +176,8 @@ def crop_polygon(points, crop_region):
                 set_first_point(point)
                 yield point
 
-        if first_inside_point is not None and not np.array_equiv(first_inside_point, previous_point):
+        if (first_inside_point is not None
+                and not np.array_equiv(first_inside_point, previous_point)):
             yield first_inside_point
 
     min_x, max_x, min_y, max_y = crop_region
@@ -232,7 +233,8 @@ def shrink_polygon(polygon, offset):
     for i in range(num_vertices):
         middle_idx = (i + 1) % num_vertices
         last_idx = (i + 2) % num_vertices
-        inset_polygon[middle_idx] = offset_corner(
-            polygon[i], polygon[middle_idx], polygon[last_idx])
+        inset_polygon[middle_idx] = offset_corner(polygon[i],
+                                                  polygon[middle_idx],
+                                                  polygon[last_idx])
 
     return inset_polygon

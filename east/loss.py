@@ -35,8 +35,8 @@ def _rbox_aabb_loss(ground_truth_aabb, predicted_aabb):
     ground_truth_area = _aabb_box_area(ground_truth_aabb)
     predicted_area = _aabb_box_area(predicted_aabb)
 
-    intersected_area = _aabb_intersected_area(
-        ground_truth_aabb, predicted_aabb)
+    intersected_area = _aabb_intersected_area(ground_truth_aabb,
+                                              predicted_aabb)
     union_area = ground_truth_area + predicted_area - intersected_area
 
     return -tf.log((intersected_area + 1.0) / (union_area + 1.0))

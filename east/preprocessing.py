@@ -149,8 +149,8 @@ def random_crop_with_text_boxes_cropped(target_size, at_least_one_box_ratio, ima
             except ValueError as e:
                 traceback.print_exc()
 
-                warnings.warn(
-                    'Cannot find good crop start. Revert back to random selection.', RuntimeWarning)
+                warnings.warn('Cannot find good crop start. Revert back to random selection.',
+                              RuntimeWarning)
                 return find_good_crop_start(img_width,
                                             img_height,
                                             target_width,
@@ -205,10 +205,9 @@ def process_data(pipeline, image, text_boxes):
     np_text_boxes = [np.asarray(box[1:]).reshape(-1, 2)
                      for box in text_boxes]
 
-    processed_img, processed_text_boxes = reduce(
-        lambda x, f: f(image=x[0], text_boxes=x[1]),
-        pipeline,
-        (pil_img, np_text_boxes))
+    processed_img, processed_text_boxes = reduce(lambda x, f: f(image=x[0], text_boxes=x[1]),
+                                                 pipeline,
+                                                 (pil_img, np_text_boxes))
 
     return np.asarray(processed_img), processed_text_boxes
 
