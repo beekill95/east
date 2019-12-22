@@ -110,12 +110,6 @@ class EAST:
 
         if output_geometry == 'RBOX':
             # 4 filters for aabb coordinates, last filter for angle.
-            angle = keras.layers.Conv2D(
-                filters=1,
-                kernel_size=(1, 1),
-                activation='sigmoid',
-                name='rbox_angle'
-            )(feature)
             geometry = keras.layers.Conv2D(
                 filters=4,
                 kernel_size=(1, 1),
@@ -123,9 +117,15 @@ class EAST:
                 name='rbox_geometry'
             )(feature)
 
-            angle = angle * 2 * pi
+            angle = keras.layers.Conv2D(
+                filters=1,
+                kernel_size=(1, 1),
+                activation='sigmoid',
+                name='rbox_angle'
+            )(feature)
+            angle = (angle - 0.5) * 2 * pi
 
-            self._rbox_geometry = keras.layers.concatenate([angle, geometry])
+            self._rbox_geometry = keras.layers.concatenate([geometry, angle])
             return keras.layers.concatenate([self._scores, self._rbox_geometry])
         elif output_geometry == 'QUAD':
             self._quad_coords = keras.layers.Conv2D(
