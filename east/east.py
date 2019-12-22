@@ -73,10 +73,14 @@ class EAST:
         # Freeze base network weights.
         self._base_network.trainable = False
 
-        self._stage_1 = get_output_tensor(self._base_network, 'activation_9')
-        self._stage_2 = get_output_tensor(self._base_network, 'activation_21')
-        self._stage_3 = get_output_tensor(self._base_network, 'activation_39')
-        self._stage_4 = get_output_tensor(self._base_network, 'activation_48')
+        self._stage_1 = get_output_tensor(self._base_network,
+                                          'conv2_block3_out')
+        self._stage_2 = get_output_tensor(self._base_network,
+                                          'conv3_block4_out')
+        self._stage_3 = get_output_tensor(self._base_network,
+                                          'conv4_block6_out')
+        self._stage_4 = get_output_tensor(self._base_network,
+                                          'conv5_block3_out')
 
     def _build_feature_merging_blocks(self):
         self._block_1 = EAST._feature_merging_block(self._stage_4,
