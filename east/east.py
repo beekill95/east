@@ -25,7 +25,7 @@ class EAST:
         if self._training:
             self._east_model.compile(optimizer='adam',
                                      loss=self._total_loss(),
-                                     metrics=['accuracy'])
+                                     metrics=[keras.metrics.mae])
 
     def load_model(self, weight_path):
         self._assert_model_initialized()
@@ -144,7 +144,8 @@ class EAST:
         assert self._output_geometry == 'RBOX', f'{self._output_geometry} loss is not implemented'
 
         def loss(y_true, y_pred):
-            score_loss = score_map_loss(y_true[:, :, :, 0], y_pred[:, :, :, 0])
+            true_mask = y_true[:, :, :, 0]
+            score_loss = score_map_loss(true_mask, y_pred[:, :, :, 0])
 
             if self._output_geometry == 'RBOX':
                 gt_rbox_geometry = y_true[:, :, :, 1:]
@@ -153,7 +154,7 @@ class EAST:
                 geometry_loss = rbox_geometry_loss(gt_rbox_geometry,
                                                    pred_rbox_geometry)
 
-            return K.mean(score_loss + geometry_lambda * geometry_loss, axis=[1, 2])
+            return K.mean(score_loss, axis=[1, 2]) + geometry_lambda * K.mean((true_mask + 0.001) * geometry_loss, axis=[1, 2])
 
         return loss
 

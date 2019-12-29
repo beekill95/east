@@ -2,6 +2,7 @@ import argparse
 from dataset import msra
 from east import east, preprocessing
 from functools import partial
+from tensorflow.keras import metrics
 from tensorflow.python.keras.utils.data_utils import OrderedEnqueuer
 from tensorflow.python.keras.callbacks import TensorBoard, ModelCheckpoint
 import warnings
@@ -92,8 +93,9 @@ def build_training_callbacks(checkpoint_path, tensorboard_path):
     if checkpoint_path:
         callbacks.append(
             ModelCheckpoint(checkpoint_path,
-                            monitor='acc',
-                            save_weights_only=True)
+                            monitor='mae',
+                            save_weights_only=True,
+                            save_best_only=True)
         )
 
     if tensorboard_path:
