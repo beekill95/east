@@ -159,7 +159,7 @@ class EAST:
                 geometry_loss = rbox_geometry_loss(gt_rbox_geometry,
                                                    pred_rbox_geometry)
 
-            return 0.001 * K.mean(score_loss, axis=[1, 2]) + geometry_lambda * K.mean((true_mask + 0.001) * geometry_loss, axis=[1, 2])
+            return K.mean(score_loss, axis=[1, 2]) + geometry_lambda * K.mean(true_mask * geometry_loss, axis=[1, 2])
 
         return loss
 
