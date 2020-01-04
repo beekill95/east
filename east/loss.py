@@ -43,7 +43,7 @@ def _rbox_aabb_loss(ground_truth_aabb, predicted_aabb):
     return -tf.math.log((intersected_area + eps) / (union_area + eps))
 
 
-def rbox_geometry_loss(ground_truth_rbox_geometry, predicted_rbox_geometry, lambda_term=1):
+def rbox_geometry_loss(ground_truth_rbox_geometry, predicted_rbox_geometry, lambda_term=10):
     # AABB loss.
     ground_truth_aabb = ground_truth_rbox_geometry[:, :, :, :4]
     predicted_aabb = predicted_rbox_geometry[:, :, :, :4]
