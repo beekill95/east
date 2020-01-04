@@ -137,7 +137,7 @@ def random_crop_with_text_boxes_cropped(target_size, at_least_one_box_ratio, ima
                 good_y = np.nonzero(y_box_region & chosen_box_idx)[0]
 
                 # Geometric PMF.
-                p_success = 0.2
+                p_success = 0.8
                 q = np.asarray([1 - p_success])
                 x_pmf = (p_success * np.power(q, np.arange(len(good_x))))
                 y_pmf = (p_success * np.power(q, np.arange(len(good_y))))

@@ -3,6 +3,7 @@ from east.rbox import decode_rbox
 from math import pi
 from tensorflow import keras as keras
 from tensorflow.python.keras import backend as K
+from tensorflow.keras.applications.resnet50 import preprocess_input, ResNet50
 
 
 class EAST:
@@ -20,7 +21,7 @@ class EAST:
         self._build_feature_merging_blocks()
         output = self._build_output_layers(output_geometry)
 
-        self._east_model = keras.Model(self._base_network.input, output)
+        self._east_model = keras.Model(self._input, output)
 
         if self._training:
             self._east_model.compile(optimizer='adam',
@@ -66,9 +67,13 @@ class EAST:
         self._assert_model_initialized()
 
     def _build_base_network(self, input_shape):
-        self._base_network = keras.applications.ResNet50(include_top=False,
-                                                         weights='imagenet',
-                                                         input_shape=input_shape)
+        self._input = keras.Input(shape=input_shape)
+        mean_subtracted = EAST._mean_pixel_subtraction(self._input)
+        # mean_subtracted = preprocess_input(self._input)
+
+        self._base_network = ResNet50(include_top=False,
+                                      weights='imagenet',
+                                      input_tensor=mean_subtracted)
 
         # Freeze base network weights.
         self._base_network.trainable = False
@@ -181,6 +186,16 @@ class EAST:
         )(conv_1)
 
         return conv_3
+
+    @staticmethod
+    def _mean_pixel_subtraction(images, means=[123.68, 116.78, 103.94]):
+        channels = []
+        for i in range(3):
+            img = images[:, :, :, i] - means[i]
+            channels.append(K.expand_dims(img, axis=-1))
+
+        # Concatenate these layers, also switch from RGB to BGR, similar to Keras's preprocess_input function.
+        return keras.layers.concatenate(channels[::-1], axis=-1)
 
 
 def unpool_layer(input_tensor):
