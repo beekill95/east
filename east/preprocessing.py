@@ -111,14 +111,14 @@ def random_crop_with_text_boxes_cropped(target_size, at_least_one_box_ratio, ima
                 min_x, max_x = np.min(text_box[:, 0]), np.max(text_box[:, 0])
                 min_y, max_y = np.min(text_box[:, 1]), np.max(text_box[:, 1])
 
-                slack = 0.1
+                slack = 32
 
-                start_x = max(int(min_x - target_width * slack), 0)
+                start_x = max(int(min_x - slack), 0)
                 end_x = int((min_x + max_x) / 2)
                 end_x = end_x if end_x > 0 else int(max_x)
                 x_box_region[start_x:end_x] |= 1 << i
 
-                start_y = max(int(min_y - target_height * slack), 0)
+                start_y = max(int(min_y - slack), 0)
                 end_y = int((min_y + max_y) / 2)
                 end_y = end_y if end_y > 0 else int(max_y)
                 y_box_region[start_y:end_y] |= 1 << i
