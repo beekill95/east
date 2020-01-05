@@ -3,6 +3,7 @@ from east.rbox import decode_rbox
 from math import pi
 from tensorflow import keras as keras
 from tensorflow.python.keras import backend as K
+from tensorflow.keras.applications.resnet50 import ResNet50
 
 
 class EAST:
@@ -20,12 +21,12 @@ class EAST:
         self._build_feature_merging_blocks()
         output = self._build_output_layers(output_geometry)
 
-        self._east_model = keras.Model(self._base_network.input, output)
+        self._east_model = keras.Model(self._input, output)
 
         if self._training:
             self._east_model.compile(optimizer='adam',
                                      loss=self._total_loss(),
-                                     metrics=['accuracy'])
+                                     metrics=[keras.metrics.mae, 'accuracy'])
 
     def load_model(self, weight_path):
         self._assert_model_initialized()
@@ -66,9 +67,11 @@ class EAST:
         self._assert_model_initialized()
 
     def _build_base_network(self, input_shape):
-        self._base_network = keras.applications.ResNet50(include_top=False,
-                                                         weights='imagenet',
-                                                         input_shape=input_shape)
+        self._input = keras.Input(shape=input_shape)
+        preprocessed = EAST._mean_pixel_subtraction(self._input)
+        self._base_network = ResNet50(include_top=False,
+                                      weights='imagenet',
+                                      input_tensor=preprocessed)
 
         # Freeze base network weights.
         self._base_network.trainable = False
@@ -143,8 +146,12 @@ class EAST:
     def _total_loss(self, geometry_lambda=1):
         assert self._output_geometry == 'RBOX', f'{self._output_geometry} loss is not implemented'
 
+        def mean(loss_tensor):
+            return K.mean(loss_tensor, axis=[1, 2])
+
         def loss(y_true, y_pred):
-            score_loss = score_map_loss(y_true[:, :, :, 0], y_pred[:, :, :, 0])
+            true_mask = y_true[:, :, :, 0]
+            score_loss = score_map_loss(true_mask, y_pred[:, :, :, 0])
 
             if self._output_geometry == 'RBOX':
                 gt_rbox_geometry = y_true[:, :, :, 1:]
@@ -153,7 +160,7 @@ class EAST:
                 geometry_loss = rbox_geometry_loss(gt_rbox_geometry,
                                                    pred_rbox_geometry)
 
-            return K.mean(score_loss + geometry_lambda * geometry_loss, axis=[1, 2])
+            return mean(score_loss) + geometry_lambda * mean(true_mask * geometry_loss)
 
         return loss
 
@@ -180,6 +187,17 @@ class EAST:
         )(conv_1)
 
         return conv_3
+
+    @staticmethod
+    def _mean_pixel_subtraction(images, means=[123.68, 116.78, 103.94]):
+        channels = []
+        for i in range(3):
+            img = images[:, :, :, i] - means[i]
+            channels.append(K.expand_dims(img, axis=-1))
+
+        # Concatenate these layers, also switch from RGB to BGR,
+        # similar to Keras's preprocess_input function.
+        return keras.layers.concatenate(channels[::-1], axis=-1)
 
 
 def unpool_layer(input_tensor):

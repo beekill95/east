@@ -1,9 +1,11 @@
 import tensorflow as tf
 # FIXME: many of these are using tensorflow API directly. We should convert it to use Keras API.
 
+EPS = 1e-10
+
 
 def score_map_loss(ground_truth_score_map, predicted_score_map):
-    def log(x): return tf.log(tf.clip_by_value(x, 1e-10, 1.0))
+    def log(x): return tf.log(tf.clip_by_value(x, EPS, 1.0))
 
     ground_truth_shape = tf.cast(tf.shape(ground_truth_score_map), tf.float32)
     beta = 1 - (tf.math.reduce_sum(ground_truth_score_map, axis=[1, 2], keep_dims=True) /
@@ -39,7 +41,7 @@ def _rbox_aabb_loss(ground_truth_aabb, predicted_aabb):
                                               predicted_aabb)
     union_area = ground_truth_area + predicted_area - intersected_area
 
-    return -tf.log((intersected_area + 1.0) / (union_area + 1.0))
+    return -tf.math.log((intersected_area + EPS) / (union_area + EPS))
 
 
 def rbox_geometry_loss(ground_truth_rbox_geometry, predicted_rbox_geometry, lambda_term=10):

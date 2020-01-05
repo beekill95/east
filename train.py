@@ -66,8 +66,8 @@ def load_msra(msra_seq, batch_size=32, shuffle=True):
 def process_to_train_data(msra_seq,
                           crop_target_size=(512, 512),
                           crop_at_least_one_box_ratio=5/8,
-                          random_scales=[0.5, 1.0, 1.5, 2.0],
-                          random_angles=[-20, 20]):
+                          random_scales=[0.5, 0.75, 1.0, 1.25],
+                          random_angles=[-5, 5]):
     pipeline = [
         partial(preprocessing.random_scale, random_scales),
         partial(preprocessing.random_rotate, random_angles),
@@ -92,8 +92,9 @@ def build_training_callbacks(checkpoint_path, tensorboard_path):
     if checkpoint_path:
         callbacks.append(
             ModelCheckpoint(checkpoint_path,
-                            monitor='acc',
-                            save_weights_only=True)
+                            monitor='mae',
+                            save_weights_only=True,
+                            save_best_only=True)
         )
 
     if tensorboard_path:
