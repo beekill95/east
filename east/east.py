@@ -26,13 +26,7 @@ class EAST:
         if self._training:
             self._east_model.compile(optimizer='adam',
                                      loss=self._total_loss(),
-<< << << < HEAD
                                      metrics=[keras.metrics.mae, 'accuracy'])
-
-
-== == == =
-                                     metrics = [keras.metrics.mae])
->> >>>> > Multiply geometric score with ground truth to limit loss to valid text area.
 
     def load_model(self, weight_path):
         self._assert_model_initialized()
