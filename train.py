@@ -1,5 +1,5 @@
 import argparse
-from dataset import msra
+from dataset import msra, icdar
 from east import east, preprocessing
 from functools import partial
 from tensorflow.python.keras.utils.data_utils import OrderedEnqueuer
@@ -13,8 +13,12 @@ def parse_arguments():
     parser.add_argument('--msra-path',
                         dest='msra_path',
                         action='store',
-                        required=True,
                         help='Path to MSRA TD500 training dataset.')
+    parser.add_argument('--icdar-2015',
+                        dest='icdar_2015',
+                        action='store',
+                        help='Path to ICDAR 2015 training dataset.')
+
     parser.add_argument('--batch-size',
                         dest='batch_size',
                         action='store',
@@ -59,8 +63,15 @@ def build_train_model(input_shape=(512, 512, 3)):
     return east_model
 
 
-def load_msra(msra_seq, batch_size=32, shuffle=True):
-    return msra.MSRASequence(msra_seq, batch_size, shuffle)
+def load_training_data(args, shuffle=True):
+    batch_size = args.batch_size
+
+    if args.msra_path:
+        return msra.MSRASequence(args.msra_path, batch_size, shuffle)
+    elif args.icdar_2015:
+        return icdar.ICDAR2015Sequence(args.icdar_2015, batch_size, shuffle)
+    else:
+        raise Exception('Neither MSRA nor ICDAR training dataset present.')
 
 
 def process_to_train_data(msra_seq,
@@ -113,16 +124,15 @@ if __name__ == "__main__":
 
     # Check if either checkpoints or output argument present.
     if not args.checkpoint and not args.output:
-        warnings.warn(
-            'Neither checkpoint or output argument present, train model won\'t be saved!',
-            UserWarning)
+        warnings.warn('Neither checkpoint or output argument present, train model won\'t be saved!',
+                      UserWarning)
 
     # Load the data.
-    msra_seq = load_msra(args.msra_path, args.batch_size)
+    data_seq = load_training_data(args, shuffle=True)
 
     # Convert and pre-process images and groundtruth to correct format
     # expected by the model.
-    training_seq = process_to_train_data(msra_seq)
+    training_seq = process_to_train_data(data_seq)
 
     # Build the model.
     east_model = build_train_model()
@@ -141,7 +151,7 @@ if __name__ == "__main__":
 
         data_generator = enqueuer.get()
         east_model.train(data_generator,
-                         train_steps_per_epoch=len(msra_seq),
+                         train_steps_per_epoch=len(data_seq),
                          epochs=args.epochs,
                          callbacks=training_callbacks)
 
