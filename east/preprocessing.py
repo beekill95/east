@@ -8,6 +8,7 @@ from math import pi
 import numpy as np
 from PIL import Image
 import random
+from scipy.spatial import ConvexHull
 import traceback
 from tensorflow.python.keras.utils.data_utils import Sequence
 import warnings
@@ -161,6 +162,15 @@ def random_crop_with_text_boxes_cropped(target_size, at_least_one_box_ratio, ima
                                             target_height,
                                             0)
 
+    def is_valid_cropped_box(box):
+        """
+        Only accept box that has more than 3 hull vertices as valid box.
+        """
+        try:
+            return len(ConvexHull(box).vertices) >= 3
+        except Exception:
+            return False
+
     img_width, img_height = image.size
     target_width, target_height = target_size
 
@@ -182,8 +192,10 @@ def random_crop_with_text_boxes_cropped(target_size, at_least_one_box_ratio, ima
         box,
         (crop_left, crop_left + target_width,
          crop_top, crop_top + target_height)) for box in text_boxes)
-    # Filtered out invalid boxes: boxes must have at least 3 vertices.
-    cropped_text_boxes = filter(lambda b: len(b) >= 3, cropped_text_boxes)
+
+    # Filtered out invalid boxes
+    cropped_text_boxes = filter(is_valid_cropped_box, cropped_text_boxes)
+
     # Change the origin to the cropped start.
     cropped_text_boxes = map(lambda b: b - np.array([crop_left, crop_top]),
                              cropped_text_boxes)
