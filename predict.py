@@ -45,13 +45,14 @@ def build_model(checkpoint_path, image_size):
 def recognize_text(model, images, image_size, score_threshold, nms_threshold):
     predicted = model.predict(np.asarray(images))
 
-    score_map = predicted[0][:, :, 0]
-    score_map = (np.where(score_map > score_threshold, 1, 0)
-                 * 255).astype(np.uint8)
-
     predicted_boxes = postprocessing.extract_text_boxes(predicted[0],
-                                                        image_size,
+                                                        (512, 512),
                                                         score_threshold)
+
+    predicted_boxes = postprocessing.filter_text_boxes(predicted[0][:, :, 0],
+                                                       predicted_boxes,
+                                                       image_size,
+                                                       0.5)
 
     predicted_boxes = [np.append(b[1].flatten(), [b[0]])
                        for b in predicted_boxes]
