@@ -14,6 +14,10 @@ class EastBase(abc.ABC):
         pass
 
     @abc.abstractmethod
+    def summary(self):
+        pass
+
+    @abc.abstractmethod
     def input(self):
         """Return the input of the base network."""
         pass

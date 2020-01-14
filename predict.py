@@ -1,5 +1,6 @@
 import argparse
 from basenet.resnet50_base import ResNet50Base
+from basenet.efficientnetb3_base import EfficientNetB3Base
 from dataset import msra
 from east import east, postprocessing, nms
 import numpy as np
@@ -36,7 +37,7 @@ def parse_arguments():
 
 
 def build_model(checkpoint_path, image_size):
-    base = ResNet50Base()
+    base = EfficientNetB3Base()
 
     model = east.EAST(base_network=base)
     model.build_model(image_size + (3,))

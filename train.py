@@ -1,4 +1,6 @@
 import argparse
+from basenet.resnet50_base import ResNet50Base
+from basenet.efficientnetb3_base import EfficientNetB3Base
 from dataset import msra, icdar
 from east import east, preprocessing
 from functools import partial
@@ -58,7 +60,9 @@ def parse_arguments():
 
 
 def build_train_model(input_shape=(512, 512, 3)):
-    east_model = east.EAST(training=True)
+    base_network = EfficientNetB3Base()
+
+    east_model = east.EAST(training=True, base_network=base_network)
     east_model.build_model(input_shape)
     return east_model
 
