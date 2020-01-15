@@ -18,6 +18,12 @@ def parse_arguments():
                         dest='icdar_2015',
                         action='store',
                         help='Path to ICDAR 2015 training dataset.')
+    parser.add_argument('--validation-percentage',
+                        dest='validation_percentage',
+                        action='store',
+                        type=float,
+                        default=0.2,
+                        help='Percentage to split the data into training and validation.')
 
     parser.add_argument('--batch-size',
                         dest='batch_size',
@@ -63,18 +69,31 @@ def build_train_model(input_shape=(512, 512, 3)):
     return east_model
 
 
-def load_training_data(args, shuffle=True):
+def load_data_sequences(args, train_dir, val_dir, shuffle=True):
     batch_size = args.batch_size
 
     if args.msra_path:
-        return msra.MSRASequence(args.msra_path, batch_size, shuffle)
+        train_seq = msra.MSRASequence(train_dir, batch_size, shuffle)
+        val_seq = msra.MSRASequence(val_dir, batch_size, False)
     elif args.icdar_2015:
-        return icdar.ICDAR2015Sequence(args.icdar_2015, batch_size, shuffle)
+        train_seq = icdar.ICDAR2015Sequence(train_dir, batch_size, shuffle)
+        val_seq = icdar.ICDAR2015Sequence(val_dir, batch_size, False)
+    else:
+        raise Exception('Neither MSRA nor ICDAR training dataset present.')
+
+    return train_seq, val_seq
+
+
+def training_data_splitter(args):
+    if args.msra_path:
+        return msra.MSRATrainValidationSplitter(args.msra_path, args.validation_percentage)
+    elif args.icdar_2015:
+        return icdar.ICDAR2015TrainValidationSplitter(args.icdar_2015, args.validation_percentage)
     else:
         raise Exception('Neither MSRA nor ICDAR training dataset present.')
 
 
-def process_to_train_data(msra_seq,
+def process_to_train_data(train_seq,
                           crop_target_size=(512, 512),
                           crop_at_least_one_box_ratio=5/8,
                           random_scales=[0.5, 0.75, 1.0, 1.25],
@@ -89,11 +108,20 @@ def process_to_train_data(msra_seq,
         partial(preprocessing.pad_image, crop_target_size)
     ]
 
-    return preprocessing.PreprocessingSequence(msra_seq, pipeline)
+    return preprocessing.PreprocessingSequence(train_seq, pipeline)
 
 
-def build_training_data_enqueuer(training_seq):
-    enqueuer = OrderedEnqueuer(training_seq)
+def process_to_val_data(val_seq, target_size=(512, 512)):
+    pipeline = [
+        partial(preprocessing.square_padding),
+        partial(preprocessing.resize_image, target_size=target_size)
+    ]
+
+    return preprocessing.PreprocessingSequence(val_seq, pipeline)
+
+
+def build_data_enqueuer(data_seq):
+    enqueuer = OrderedEnqueuer(data_seq)
     return enqueuer
 
 
@@ -103,7 +131,7 @@ def build_training_callbacks(checkpoint_path, tensorboard_path):
     if checkpoint_path:
         callbacks.append(
             ModelCheckpoint(checkpoint_path,
-                            monitor='mae',
+                            monitor='loss',
                             save_weights_only=True,
                             save_best_only=True)
         )
@@ -127,40 +155,48 @@ if __name__ == "__main__":
         warnings.warn('Neither checkpoint or output argument present, train model won\'t be saved!',
                       UserWarning)
 
-    # Load the data.
-    data_seq = load_training_data(args, shuffle=True)
-
-    # Convert and pre-process images and groundtruth to correct format
-    # expected by the model.
-    training_seq = process_to_train_data(data_seq)
-
     # Build the model.
     east_model = build_train_model()
     east_model.summary_model()
 
-    # Build generator.
-    enqueuer = build_training_data_enqueuer(training_seq)
-    enqueuer.start(workers=args.threads)
+    # Split the data into train and validation set.
+    with training_data_splitter(args) as (train_dir, val_dir):
+        # Load the data.
+        train_seq, val_seq = load_data_sequences(args, train_dir, val_dir)
 
-    # Begin the training.
-    try:
-        print('===== Begin Training =====')
+        # Convert and pre-process images and groundtruth to correct format
+        # expected by the model.
+        train_seq = process_to_train_data(train_seq)
+        val_seq = process_to_val_data(val_seq)
 
-        training_callbacks = build_training_callbacks(args.checkpoint,
-                                                      args.tensorboard)
+        # Build enqueuers.
+        train_enqueuer = build_data_enqueuer(train_seq)
+        val_enqueuer = build_data_enqueuer(val_seq)
 
-        data_generator = enqueuer.get()
-        east_model.train(data_generator,
-                         train_steps_per_epoch=len(data_seq),
-                         epochs=args.epochs,
-                         callbacks=training_callbacks)
+        # Start enqueuers.
+        train_enqueuer.start(workers=args.threads)
+        val_enqueuer.start(workers=args.threads)
 
-        print('===== End Training =====')
-    except KeyboardInterrupt:
-        print('===== Training Interupted =====')
+        # Begin the training.
+        try:
+            print('\n===== Begin Training =====')
+            training_callbacks = build_training_callbacks(args.checkpoint,
+                                                          args.tensorboard)
 
-    # Stop generator.
-    enqueuer.stop()
+            east_model.train(train_generator=train_enqueuer.get(),
+                             train_steps_per_epoch=len(train_seq),
+                             epochs=args.epochs,
+                             callbacks=training_callbacks,
+                             validation_generator=val_enqueuer.get(),
+                             validation_steps_per_epoch=len(val_seq))
+
+            print('\n===== End Training =====')
+        except KeyboardInterrupt:
+            print('\n===== Training Interupted =====')
+
+        # Stop enqueuers.
+        train_enqueuer.stop()
+        val_enqueuer.stop()
 
     # Save the model.
     if args.output:

@@ -1,5 +1,6 @@
 from dataset.train_validation_splitter import TrainValidationSplitter
 import dataset.utils as data_utils
+from math import ceil
 import numpy as np
 from PIL import Image
 from random import shuffle
@@ -18,7 +19,8 @@ class ICDAR2015Sequence(Sequence):
         self._image_paths = data_utils.list_all_images(self._icdar_path)
 
     def __len__(self):
-        return int(len(self._image_paths) / self._batch_size)
+        size = len(self._image_paths) / self._batch_size
+        return int(ceil(size))
 
     def __getitem__(self, index):
         batch_size = self._batch_size

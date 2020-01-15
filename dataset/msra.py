@@ -1,9 +1,9 @@
 from dataset.train_validation_splitter import TrainValidationSplitter
 import dataset.utils as data_utils
 from east.geometry import rotate_polygon
-import numpy as np
 import math
 from multiprocessing.dummy import Pool as ThreadPool
+import numpy as np
 from PIL import Image
 from random import shuffle
 from tensorflow.python.keras.utils.data_utils import Sequence
@@ -88,7 +88,8 @@ class MSRASequence(Sequence):
         self._image_paths = data_utils.list_all_images(msra_data_path)
 
     def __len__(self):
-        return int(len(self._image_paths) / self._batch_size)
+        size = len(self._image_paths) / self._batch_size
+        return int(math.ceil(size))
 
     def __getitem__(self, index):
         batch_size = self._batch_size

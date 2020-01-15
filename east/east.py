@@ -25,8 +25,7 @@ class EAST:
 
         if self._training:
             self._east_model.compile(optimizer='adam',
-                                     loss=self._total_loss(),
-                                     metrics=[keras.metrics.mae, 'accuracy'])
+                                     loss=self._total_loss())
 
     def load_model(self, weight_path):
         self._assert_model_initialized()
