@@ -48,5 +48,18 @@ def get_file_name(path, with_ext=True):
     return file_name if with_ext else '.'.join(file_name.split('.')[:-1])
 
 
-def join_path(path, file_name):
-    return os.path.join(path, file_name)
+def join_path(path, *paths):
+    return os.path.join(path, *paths)
+
+
+def make_dirs(dir):
+    if not does_directory_exist(dir):
+        os.makedirs(dir)
+
+
+def absolute_path(path):
+    return os.path.abspath(path)
+
+
+def symlink(link, target):
+    os.symlink(target, link)
