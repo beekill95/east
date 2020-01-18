@@ -60,7 +60,7 @@ def parse_arguments():
 
 
 def build_train_model(input_shape=(512, 512, 3)):
-    base_network = EfficientNetB3Base()
+    base_network = ResNet50Base()
 
     east_model = east.EAST(training=True, base_network=base_network)
     east_model.build_model(input_shape)
