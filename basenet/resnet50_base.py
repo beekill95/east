@@ -1,4 +1,4 @@
-from basenet import east_base
+from basenet import east_base, utils
 from tensorflow import keras as keras
 from tensorflow.python.keras import backend as K
 from tensorflow.keras.applications.resnet50 import ResNet50
@@ -33,25 +33,22 @@ class ResNet50Base(east_base.EastBase):
 
     def stage_1(self):
         self._assert_model_built()
-        return self._get_output('conv2_block3_out')
+        return utils.get_output(self._model, 'conv2_block3_out')
 
     def stage_2(self):
         self._assert_model_built()
-        return self._get_output('conv3_block4_out')
+        return utils.get_output(self._model, 'conv3_block4_out')
 
     def stage_3(self):
         self._assert_model_built()
-        return self._get_output('conv4_block6_out')
+        return utils.get_output(self._model, 'conv4_block6_out')
 
     def stage_4(self):
         self._assert_model_built()
-        return self._get_output('conv5_block3_out')
+        return utils.get_output(self._model, 'conv5_block3_out')
 
     def _assert_model_built(self):
         assert self._model, 'Base network is not constructed.'
-
-    def _get_output(self, tensor_name):
-        return self._model.get_layer(tensor_name).output
 
     @staticmethod
     def _mean_pixel_subtraction(images, means=[123.68, 116.78, 103.94]):
