@@ -216,6 +216,29 @@ def pad_image(target_size, image, text_boxes):
     return padded_img, text_boxes
 
 
+def square_padding(image, text_boxes):
+    w, h = image.size
+    target_size = (w, w) if w >= h else (h, h)
+
+    padded_img = Image.new(image.mode, target_size)
+    padded_img.paste(image)
+
+    return padded_img, text_boxes
+
+
+def resize_image(target_size, image, text_boxes):
+    def resize_text_box(text_box):
+        box = text_box.astype(np.float32)
+        box[:, 0] *= target_size[0] / image.size[0]
+        box[:, 1] *= target_size[1] / image.size[1]
+        return box
+
+    resized_img = image.copy()
+    resized_img.thumbnail(target_size, Image.ANTIALIAS)
+    resized_boxes = map(resize_text_box, text_boxes)
+    return resized_img, list(resized_boxes)
+
+
 def process_data(pipeline, image, text_boxes):
     pil_img = Image.fromarray(image)
     np_text_boxes = [np.asarray(box[1:]).reshape(-1, 2)

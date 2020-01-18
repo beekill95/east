@@ -1,4 +1,6 @@
+from dataset.train_validation_splitter import TrainValidationSplitter
 import dataset.utils as data_utils
+from math import ceil
 import numpy as np
 from PIL import Image
 from random import shuffle
@@ -17,7 +19,8 @@ class ICDAR2015Sequence(Sequence):
         self._image_paths = data_utils.list_all_images(self._icdar_path)
 
     def __len__(self):
-        return int(len(self._image_paths) / self._batch_size)
+        size = len(self._image_paths) / self._batch_size
+        return int(ceil(size))
 
     def __getitem__(self, index):
         batch_size = self._batch_size
@@ -28,10 +31,6 @@ class ICDAR2015Sequence(Sequence):
                       else len(self._image_paths))
 
         img_files = self._image_paths[index * batch_size:next_index]
-
-        def gt_file(image_file):
-            image_name = data_utils.get_file_name(image_file, with_ext=False)
-            return f'gt_{image_name}.txt'
 
         def load_gt(gt_path):
             text_boxes = []
@@ -52,7 +51,7 @@ class ICDAR2015Sequence(Sequence):
         def load_image_gt(image_file):
             img_path = data_utils.join_path(self._icdar_path, image_file)
             gt_path = data_utils.join_path(self._icdar_path,
-                                           gt_file(image_file))
+                                           _gt_file(image_file))
 
             return load_image(img_path), load_gt(gt_path)
 
@@ -62,3 +61,32 @@ class ICDAR2015Sequence(Sequence):
     def on_epoch_end(self):
         if self._shuffle:
             shuffle(self._image_paths)
+
+
+class ICDAR2015TrainValidationSplitter(TrainValidationSplitter):
+    def __init__(self, icdar_path, validation_percentage):
+        super().__init__(validation_percentage)
+        self._icdar_path = data_utils.absolute_path(icdar_path)
+
+    def _split_training_data(self, train_dir, val_dir, validation_percentage):
+        image_names = data_utils.list_all_images(self._icdar_path)
+
+        total_images = len(image_names)
+        nb_train_images = int(total_images * (1 - validation_percentage))
+
+        for i in range(total_images):
+            img_name = image_names[i]
+            gt_name = _gt_file(img_name)
+
+            link_dir = train_dir if i <= nb_train_images else val_dir
+
+            # Create symbolic links for image and groundtruth in the link directory.
+            data_utils.symlink(data_utils.join_path(link_dir, img_name),
+                               data_utils.join_path(self._icdar_path, img_name))
+            data_utils.symlink(data_utils.join_path(link_dir, gt_name),
+                               data_utils.join_path(self._icdar_path, gt_name))
+
+
+def _gt_file(image_file):
+    image_name = data_utils.get_file_name(image_file, with_ext=False)
+    return f'gt_{image_name}.txt'

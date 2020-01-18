@@ -1,8 +1,9 @@
+from dataset.train_validation_splitter import TrainValidationSplitter
 import dataset.utils as data_utils
 from east.geometry import rotate_polygon
-import numpy as np
 import math
 from multiprocessing.dummy import Pool as ThreadPool
+import numpy as np
 from PIL import Image
 from random import shuffle
 from tensorflow.python.keras.utils.data_utils import Sequence
@@ -87,7 +88,8 @@ class MSRASequence(Sequence):
         self._image_paths = data_utils.list_all_images(msra_data_path)
 
     def __len__(self):
-        return int(len(self._image_paths) / self._batch_size)
+        size = len(self._image_paths) / self._batch_size
+        return int(math.ceil(size))
 
     def __getitem__(self, index):
         batch_size = self._batch_size
@@ -120,6 +122,30 @@ class MSRASequence(Sequence):
     def on_epoch_end(self):
         if self._shuffle:
             shuffle(self._image_paths)
+
+
+class MSRATrainValidationSplitter(TrainValidationSplitter):
+    def __init__(self, msra_path, validation_percentage):
+        super().__init__(validation_percentage)
+        self._msra_path = data_utils.absolute_path(msra_path)
+
+    def _split_training_data(self, train_dir, val_dir, validation_percentage):
+        image_names = data_utils.list_all_images(self._msra_path)
+
+        total_images = len(image_names)
+        nb_train_images = int(total_images * (1 - validation_percentage))
+
+        for i in range(total_images):
+            img_name = image_names[i]
+            gt_name = _gt_file(img_name)
+
+            link_dir = train_dir if i <= nb_train_images else val_dir
+
+            # Create symbolic link in the link directory.
+            data_utils.symlink(data_utils.join_path(link_dir, img_name),
+                               data_utils.join_path(self._msra_path, img_name))
+            data_utils.symlink(data_utils.join_path(link_dir, gt_name),
+                               data_utils.join_path(self._msra_path, gt_name))
 
 
 def _gt_file(img_file):
