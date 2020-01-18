@@ -1,3 +1,4 @@
+from basenet import east_base
 from east.loss import rbox_geometry_loss, score_map_loss
 from east.rbox import decode_rbox
 from math import pi
@@ -7,8 +8,9 @@ from tensorflow.keras.applications.resnet50 import ResNet50
 
 
 class EAST:
-    def __init__(self, training=False):
+    def __init__(self, base_network: east_base.EastBase, training=False):
         self._training = training
+        self._base_network = base_network
 
     def build_model(self, input_shape, output_geometry='RBOX'):
         """
@@ -17,11 +19,11 @@ class EAST:
         :param input_shape: a tuple shows shape of input images.
         :param output_geometry: geometry use for output layers. Available geometries are RBOX and QUAD.
         """
-        self._build_base_network(input_shape)
+        self._base_network.build(input_shape)
         self._build_feature_merging_blocks()
         output = self._build_output_layers(output_geometry)
 
-        self._east_model = keras.Model(self._input, output)
+        self._east_model = keras.Model(self._base_network.input(), output)
 
         if self._training:
             self._east_model.compile(optimizer='adam',
@@ -74,32 +76,16 @@ class EAST:
         self._assert_model_initialized()
         return self._east_model.predict(images)
 
-    def _build_base_network(self, input_shape):
-        self._input = keras.Input(shape=input_shape)
-        preprocessed = EAST._mean_pixel_subtraction(self._input)
-        self._base_network = ResNet50(include_top=False,
-                                      weights='imagenet',
-                                      input_tensor=preprocessed)
-
-        # Freeze base network weights.
-        self._base_network.trainable = False
-
-        self._stage_1 = get_output_tensor(self._base_network,
-                                          'conv2_block3_out')
-        self._stage_2 = get_output_tensor(self._base_network,
-                                          'conv3_block4_out')
-        self._stage_3 = get_output_tensor(self._base_network,
-                                          'conv4_block6_out')
-        self._stage_4 = get_output_tensor(self._base_network,
-                                          'conv5_block3_out')
-
     def _build_feature_merging_blocks(self):
-        self._block_1 = EAST._feature_merging_block(self._stage_4,
-                                                    self._stage_3, 128)
+        self._block_1 = EAST._feature_merging_block(self._base_network.stage_4(),
+                                                    self._base_network.stage_3(),
+                                                    128)
         self._block_2 = EAST._feature_merging_block(self._block_1,
-                                                    self._stage_2, 64)
+                                                    self._base_network.stage_2(),
+                                                    64)
         self._block_3 = EAST._feature_merging_block(self._block_2,
-                                                    self._stage_1, 32)
+                                                    self._base_network.stage_1(),
+                                                    32)
         self._block_4 = keras.layers.Conv2D(
             filters=32,
             kernel_size=(3, 3),
@@ -196,17 +182,6 @@ class EAST:
 
         return conv_3
 
-    @staticmethod
-    def _mean_pixel_subtraction(images, means=[123.68, 116.78, 103.94]):
-        channels = []
-        for i in range(3):
-            img = images[:, :, :, i] - means[i]
-            channels.append(K.expand_dims(img, axis=-1))
-
-        # Concatenate these layers, also switch from RGB to BGR,
-        # similar to Keras's preprocess_input function.
-        return keras.layers.concatenate(channels[::-1], axis=-1)
-
 
 def unpool_layer(input_tensor):
     return keras.layers.UpSampling2D()(input_tensor)
@@ -214,7 +189,3 @@ def unpool_layer(input_tensor):
 
 def concat_layer(a_tensor, b_tensor):
     return keras.layers.concatenate([a_tensor, b_tensor])
-
-
-def get_output_tensor(model, name):
-    return model.get_layer(name).output
