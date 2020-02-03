@@ -135,7 +135,7 @@ def build_training_callbacks(checkpoint_path, tensorboard_path):
     if checkpoint_path:
         callbacks.append(
             ModelCheckpoint(checkpoint_path,
-                            monitor='loss',
+                            monitor='val_loss',
                             save_weights_only=True,
                             save_best_only=True)
         )
