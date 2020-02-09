@@ -218,6 +218,10 @@ def pad_image(target_size, image, text_boxes):
 
 def square_padding(image, text_boxes):
     w, h = image.size
+
+    if w == h:
+        return image, text_boxes
+
     target_size = (w, w) if w >= h else (h, h)
 
     padded_img = Image.new(image.mode, target_size)
@@ -233,8 +237,7 @@ def resize_image(target_size, image, text_boxes):
         box[:, 1] *= target_size[1] / image.size[1]
         return box
 
-    resized_img = image.copy()
-    resized_img.thumbnail(target_size, Image.ANTIALIAS)
+    resized_img = image.resize(target_size, resample=Image.ANTIALIAS)
     resized_boxes = map(resize_text_box, text_boxes)
     return resized_img, list(resized_boxes)
 
