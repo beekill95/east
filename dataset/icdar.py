@@ -1,5 +1,5 @@
 from dataset.train_validation_splitter import TrainValidationSplitter
-import dataset.utils as data_utils
+from dataset import path
 from math import ceil
 import numpy as np
 from PIL import Image
@@ -16,7 +16,7 @@ class ICDAR2015Sequence(Sequence):
         self._icdar_path = icdar_2105_data_path
         self._batch_size = batch_size
         self._shuffle = shuffle
-        self._image_paths = data_utils.list_all_images(self._icdar_path)
+        self._image_paths = path.list_all_images(self._icdar_path)
 
     def __len__(self):
         size = len(self._image_paths) / self._batch_size
@@ -49,9 +49,9 @@ class ICDAR2015Sequence(Sequence):
             return np.asarray(Image.open(img_path))
 
         def load_image_gt(image_file):
-            img_path = data_utils.join_path(self._icdar_path, image_file)
-            gt_path = data_utils.join_path(self._icdar_path,
-                                           _gt_file(image_file))
+            img_path = path.join_path(self._icdar_path, image_file)
+            gt_path = path.join_path(self._icdar_path,
+                                     _gt_file(image_file))
 
             return load_image(img_path), load_gt(gt_path)
 
@@ -66,10 +66,10 @@ class ICDAR2015Sequence(Sequence):
 class ICDAR2015TrainValidationSplitter(TrainValidationSplitter):
     def __init__(self, icdar_path, validation_percentage):
         super().__init__(validation_percentage)
-        self._icdar_path = data_utils.absolute_path(icdar_path)
+        self._icdar_path = path.absolute_path(icdar_path)
 
     def _split_training_data(self, train_dir, val_dir, validation_percentage):
-        image_names = data_utils.list_all_images(self._icdar_path)
+        image_names = path.list_all_images(self._icdar_path)
 
         total_images = len(image_names)
         nb_train_images = int(total_images * (1 - validation_percentage))
@@ -81,12 +81,12 @@ class ICDAR2015TrainValidationSplitter(TrainValidationSplitter):
             link_dir = train_dir if i <= nb_train_images else val_dir
 
             # Create symbolic links for image and groundtruth in the link directory.
-            data_utils.symlink(data_utils.join_path(link_dir, img_name),
-                               data_utils.join_path(self._icdar_path, img_name))
-            data_utils.symlink(data_utils.join_path(link_dir, gt_name),
-                               data_utils.join_path(self._icdar_path, gt_name))
+            path.symlink(path.join_path(link_dir, img_name),
+                         path.join_path(self._icdar_path, img_name))
+            path.symlink(path.join_path(link_dir, gt_name),
+                         path.join_path(self._icdar_path, gt_name))
 
 
 def _gt_file(image_file):
-    image_name = data_utils.get_file_name(image_file, with_ext=False)
+    image_name = path.get_file_name(image_file, with_ext=False)
     return f'gt_{image_name}.txt'

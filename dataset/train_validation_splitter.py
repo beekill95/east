@@ -1,5 +1,5 @@
 import abc
-from dataset import utils
+from dataset import path
 import os
 from tempfile import TemporaryDirectory
 
@@ -37,7 +37,7 @@ class TrainValidationSplitter(abc.ABC):
         raise Exception('This method is not implemented.')
 
     def _create_dir(self, name):
-        d = utils.join_path(self._tempdir.name, name, '')
-        utils.make_dirs(d)
+        d = path.join_path(self._tempdir.name, name, '')
+        path.make_dirs(d)
 
         return d

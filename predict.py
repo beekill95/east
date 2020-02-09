@@ -37,7 +37,8 @@ def parse_arguments():
 
 
 def build_model(checkpoint_path, image_size):
-    base = EfficientNetB3Base()
+    # base = EfficientNetB3Base()
+    base = ResNet50Base()
 
     model = east.EAST(base_network=base)
     model.build_model(image_size + (3,))
@@ -80,7 +81,8 @@ def square_padding(image):
 
 if __name__ == "__main__":
     args = parse_arguments()
-    img = square_padding(Image.open(args.image))
+    orig_img = Image.open(args.image)
+    img = square_padding(orig_img)
 
     img_target_size = (1024, 1024)
     img = img.resize(img_target_size)
@@ -94,10 +96,15 @@ if __name__ == "__main__":
                                 args.nms_threshold)
 
     # Draw predicted image.
-    predict = Image.fromarray(img)
-    pred_draw = ImageDraw.Draw(predict)
+    # predict = Image.fromarray(img)
+    predict = orig_img
+    pred_draw = ImageDraw.Draw(orig_img)
     for b in text_boxes:
-        r = b[:-1].flatten().astype(int).tolist()
+        r = b[:-1].reshape(4, 2)
+        abc = orig_img.size[1] if orig_img.size[1] > orig_img.size[0] else orig_img.size[0]
+        r[:, 0] *= abc / 1024
+        r[:, 1] *= abc / 1024
+        r = r.flatten().astype(int).tolist()
         pred_draw.polygon(r)
 
     predict.save(args.output)
