@@ -5,7 +5,7 @@ from dataset import msra, icdar
 from east import east, preprocessing
 from functools import partial
 from tensorflow.python.keras.utils.data_utils import OrderedEnqueuer
-from tensorflow.python.keras.callbacks import TensorBoard, ModelCheckpoint
+from tensorflow.python.keras.callbacks import TensorBoard, ModelCheckpoint, EarlyStopping
 import warnings
 
 
@@ -54,6 +54,14 @@ def parse_arguments():
                         help='''
                         (Optional) Path to directory to store the tensorboard.
                         If not present, tensorboard won't be saved.
+                        ''')
+    parser.add_argument('--early-stopping-patience',
+                        action='store',
+                        dest='early_stopping_patience',
+                        type=int,
+                        help='''
+                        (Optional) Number of epochs to wait before ending the training session when loss ceases to decrease.
+                        If not present, this won't be applied.
                         ''')
     parser.add_argument('--output',
                         action='store',
@@ -129,7 +137,7 @@ def build_data_enqueuer(data_seq):
     return enqueuer
 
 
-def build_training_callbacks(checkpoint_path, tensorboard_path):
+def build_training_callbacks(checkpoint_path, tensorboard_path, early_stopping_patience):
     callbacks = []
 
     if checkpoint_path:
@@ -146,6 +154,12 @@ def build_training_callbacks(checkpoint_path, tensorboard_path):
                         write_graph=True,
                         write_images=True,
                         update_freq='epoch')
+        )
+
+    if early_stopping_patience:
+        callbacks.append(
+            EarlyStopping(monitor='val_loss',
+                          patience=early_stopping_patience)
         )
 
     return callbacks
@@ -185,7 +199,8 @@ if __name__ == "__main__":
         try:
             print('\n===== Begin Training =====')
             training_callbacks = build_training_callbacks(args.checkpoint,
-                                                          args.tensorboard)
+                                                          args.tensorboard,
+                                                          args.early_stopping_patience)
 
             east_model.train(train_generator=train_enqueuer.get(),
                              train_steps_per_epoch=len(train_seq),
