@@ -228,6 +228,9 @@ def shrink_polygon(polygon, offset):
         sign = 1 if np.cross(v21_norm, v23_norm) <= 0 else -1
         return point_2 + sign * offset * magnitude(e) * bisector
 
+    # Use convex hull instead.
+    polygon = polygon[ConvexHull(polygon).vertices]
+
     inset_polygon = np.zeros(polygon.shape)
     num_vertices = len(polygon)
     for i in range(num_vertices):
