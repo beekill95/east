@@ -1,5 +1,5 @@
 from basenet import east_base
-from east.loss import rbox_geometry_loss, score_map_loss, score_map_dice_loss
+from east.loss import rbox_geometry_loss, score_map_loss, score_map_dice_loss, score_map_dice_loss_all
 from east.rbox import decode_rbox
 from math import pi
 from tensorflow import keras as keras
@@ -147,7 +147,8 @@ class EAST:
             true_mask = y_true[:, :, :, 0]
             # score_loss = score_map_loss(true_mask, y_pred[:, :, :, 0])
             # Alternative, use dice_loss like argman's implementation.
-            score_loss = score_map_dice_loss(true_mask, y_pred[:, :, :, 0])
+            # score_loss = score_map_dice_loss(true_mask, y_pred[:, :, :, 0])
+            score_loss = score_map_dice_loss_all(y_true, y_pred)
 
             if self._output_geometry == 'RBOX':
                 gt_rbox_geometry = y_true[:, :, :, 1:]

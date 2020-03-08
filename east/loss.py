@@ -12,6 +12,14 @@ def score_map_dice_loss(groundtruth_score_map, predicted_score_map):
     return 1. - (2. * intersection / union)
 
 
+def score_map_dice_loss_all(groundtruth, predicted):
+    intersection = K.sum(groundtruth * predicted, axis=[1, 2, 3])
+    union = (K.sum(groundtruth, axis=[1, 2, 3])
+             + K.sum(predicted, axis=[1, 2, 3])
+             + K.epsilon())
+    return 1. - (2. * intersection / union)
+
+
 def score_map_loss(ground_truth_score_map, predicted_score_map):
     def log(x): return tf.log(tf.clip_by_value(x, K.epsilon(), 1.0))
 
