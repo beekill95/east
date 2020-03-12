@@ -128,11 +128,16 @@ def crop_polygon(points, crop_region):
 
         # (x - x_in) / (y - y_in) = (x_out - x_in) / (y_out - y_in)
         # FIXME: y_out - y_in could be zero. Similarly, in_out_slope could be zero.
+        if isclose(y_in, y_out):
+            assert x_line is not None and y_line is None, 'Error!'
+            return x_line, y_in
+
         in_out_slope = (x_out - x_in) / (y_out - y_in)
-        if x_line == None:
+        if x_line is None:
             x = x_in + (y_line - y_in) * in_out_slope
             return x, y_line
         else:
+            assert not isclose(in_out_slope, 0), 'Error!'
             y = y_in + (x_line - x_in) / in_out_slope
             return x_line, y
 
