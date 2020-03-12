@@ -3,3 +3,4 @@
 autopep8
 ipython
 pytest==5.1.2
+wandb
