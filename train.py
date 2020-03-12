@@ -215,7 +215,8 @@ if __name__ == "__main__":
             print('\n===== Begin Training =====')
             training_callbacks = build_training_callbacks(args.checkpoint,
                                                           args.tensorboard,
-                                                          args.early_stopping_patience)
+                                                          args.early_stopping_patience,
+                                                          args.wandb)
 
             east_model.train(train_generator=train_enqueuer.get(),
                              train_steps_per_epoch=len(train_seq),
