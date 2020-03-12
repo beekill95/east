@@ -69,6 +69,9 @@ def parse_arguments():
                         (Optional) Name of the output model, followed convention of Keras save api.
                         If not present, final model won't be saved.
                         ''')
+    parser.add_argument('--wandb',
+                        action='store_true',
+                        help='Use Weight & Bias to track experiments.')
 
     return parser.parse_args()
 
@@ -137,7 +140,7 @@ def build_data_enqueuer(data_seq):
     return enqueuer
 
 
-def build_training_callbacks(checkpoint_path, tensorboard_path, early_stopping_patience):
+def build_training_callbacks(checkpoint_path, tensorboard_path, early_stopping_patience, wandb):
     callbacks = []
 
     if checkpoint_path:
@@ -162,11 +165,21 @@ def build_training_callbacks(checkpoint_path, tensorboard_path, early_stopping_p
                           patience=early_stopping_patience)
         )
 
+    if wandb:
+        from wandb.keras import WandbCallback
+        callbacks.append(WandbCallback())
+
     return callbacks
 
 
 if __name__ == "__main__":
     args = parse_arguments()
+
+    # Only import wandb when required.
+    if args.wandb:
+        import wandb
+        wandb.init(project='my_east')
+        wandb.config.update(args)
 
     # Check if either checkpoints or output argument present.
     if not args.checkpoint and not args.output:
