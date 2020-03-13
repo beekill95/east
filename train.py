@@ -199,7 +199,8 @@ if __name__ == "__main__":
 
         # Convert and pre-process images and groundtruth to correct format
         # expected by the model.
-        train_seq = process_to_train_data(train_seq)
+        # train_seq = process_to_train_data(train_seq)
+        train_seq = process_to_val_data(train_seq)
         val_seq = process_to_val_data(val_seq)
 
         # Build enqueuers.
