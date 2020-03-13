@@ -157,7 +157,7 @@ class EAST:
                 geometry_loss = rbox_geometry_loss(gt_rbox_geometry,
                                                    pred_rbox_geometry)
 
-            return mean(score_loss) + geometry_lambda * mean(true_mask * geometry_loss)
+            return K.mean(mean(score_loss) + geometry_lambda * mean(true_mask * geometry_loss), axis=-1)
             # change because of dice loss.
             # return score_loss + geometry_lambda * mean(true_mask * geometry_loss)
 
