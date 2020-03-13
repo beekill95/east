@@ -173,16 +173,18 @@ class EAST:
         conv_1 = keras.layers.Conv2D(
             filters=filters,
             kernel_size=(1, 1),
-            activation='relu',
             padding='same'
         )(concated_tensor)
+        conv_1 = keras.layers.BatchNormalization()(conv_1)
+        conv_1 = keras.layers.Activation('relu')(conv_1)
 
         conv_3 = keras.layers.Conv2D(
             filters=filters,
             kernel_size=(3, 3),
-            activation='relu',
             padding='same'
         )(conv_1)
+        conv_3 = keras.layers.BatchNormalization()(conv_3)
+        conv_3 = keras.layers.Activation('relu')(conv_3)
 
         return conv_3
 
