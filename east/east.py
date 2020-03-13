@@ -141,7 +141,7 @@ class EAST:
         assert self._output_geometry == 'RBOX', f'{self._output_geometry} loss is not implemented'
 
         def mean(loss_tensor):
-            return K.mean(loss_tensor, axis=[1, 2])
+            return K.mean(loss_tensor)
 
         def loss(y_true, y_pred):
             true_mask = y_true[:, :, :, 0]
@@ -157,7 +157,7 @@ class EAST:
                 geometry_loss = rbox_geometry_loss(gt_rbox_geometry,
                                                    pred_rbox_geometry)
 
-            return K.mean(mean(score_loss) + geometry_lambda * mean(true_mask * geometry_loss), axis=-1)
+            return mean(score_loss) + geometry_lambda * mean(true_mask * geometry_loss)
             # change because of dice loss.
             # return score_loss + geometry_lambda * mean(true_mask * geometry_loss)
 
