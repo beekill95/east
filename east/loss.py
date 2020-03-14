@@ -33,6 +33,18 @@ def score_map_loss(ground_truth_score_map, predicted_score_map, EPS=K.epsilon())
     return loss
 
 
+def score_map_balanced_entropy_all(ground_truth_score_map, predicted_score_map, EPS=K.epsilon()):
+    def log(x): return K.log(x + EPS)
+
+    ground_truth_shape = tf.cast(tf.shape(ground_truth_score_map), tf.float32)
+    beta = 1 - (K.sum(ground_truth_score_map) / K.prod(ground_truth_shape))
+
+    loss = (- (beta * ground_truth_score_map * log(predicted_score_map))
+            - ((1 - beta) * (1 - ground_truth_score_map) * log(1 - predicted_score_map)))
+
+    return K.sum(loss)
+
+
 def _rbox_angle_loss(ground_truth_angle, predicted_angle):
     return 1 - tf.cos(predicted_angle - ground_truth_angle)
 
