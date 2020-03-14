@@ -11,6 +11,59 @@ def session():
     K.clear_session()
 
 
+def test_score_map_loss(session):
+    EPS = K.epsilon()
+    def clip(x): return np.clip(x, EPS, 1.)
+
+    # test with shape: (batch_size, w, h) = (1, 3, 4)
+    gt = np.array([
+        [0, 0, 0, 1],
+        [0, 0, 0, 1],
+        [0, 0, 0, 0]
+    ])
+    pred = np.array([
+        [0, 0, 1, 0.5],
+        [0, 0, 0.5, 0.5],
+        [0, 0, 0.5, 0.5],
+    ])
+    gt_score_map = K.constant(np.array([gt]))
+
+    pred_score_map = K.constant(np.array([pred]))
+
+    l = loss.score_map_loss(gt_score_map, pred_score_map, EPS=EPS)
+    l = l.eval(session=session)
+
+    beta = 1. - 2/12
+    expected_l = (-beta * gt * np.log(clip(pred))
+                  - (1 - beta) * (1 - gt) * np.log(clip(1 - pred)))
+
+    assert np.allclose(l, np.array([expected_l]))
+
+    # test with shape: (batch_size, w, h) = (2, 3, 4)
+    gt_2 = np.array([
+        [0, 0, 1, 1],
+        [0, 0, 0, 1],
+        [0, 0, 1, 1],
+    ])
+    pred_2 = np.array([
+        [0, 0.75, 0.75, 0.5],
+        [0.75, 0.5, 0.5, 0.25],
+        [0, 0, 1, 0.25],
+    ])
+
+    gt_score_map = K.constant(np.array([gt, gt_2]))
+    pred_score_map = K.constant(np.array([pred, pred_2]))
+
+    l = loss.score_map_loss(gt_score_map, pred_score_map, EPS=EPS)
+    l = l.eval(session=session)
+
+    beta_2 = 1. - 5/12
+    expected_l_2 = (-beta_2 * gt_2 * np.log(clip(pred_2))
+                    - (1 - beta_2) * (1 - gt_2) * np.log(clip(1 - pred_2)))
+
+    assert np.allclose(l, np.array([expected_l, expected_l_2]))
+
+
 def test_angle_loss(session):
     gt_angle = K.constant(np.array([
         [[pi/6, pi/3], [pi/2, pi/4]],
