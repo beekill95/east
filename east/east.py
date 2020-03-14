@@ -190,7 +190,10 @@ class EAST:
 
 
 def unpool_layer(input_tensor):
-    return keras.layers.UpSampling2D()(input_tensor)
+    return keras.layers.UpSampling2D(
+        size=(2, 2),
+        interpolation='bilinear'
+    )(input_tensor)
 
 
 def concat_layer(a_tensor, b_tensor):
