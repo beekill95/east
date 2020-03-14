@@ -37,11 +37,14 @@ class ICDAR2015Sequence(Sequence):
             with open(gt_path, 'r', encoding='utf-8-sig') as file:
                 for line in file:
                     # Get the first 8 box coordinates and convert to location.
-                    coords = line.split(',')[:8]
-                    coords = [int(c) for c in coords]
+                    fields = line.split(',')[:8]
+                    coords = [int(c) for c in fields[:8]]
+
+                    text = ','.join(fields[8:])
 
                     # Append 0 for dummy difficulty.
-                    text_boxes.append([0, *coords])
+                    if text != '###':
+                        text_boxes.append([0, *coords])
 
             return text_boxes
 
