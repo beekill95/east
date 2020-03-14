@@ -145,9 +145,9 @@ class EAST:
 
         def loss(y_true, y_pred):
             true_mask = y_true[:, :, :, 0]
-            score_loss = score_map_loss(true_mask, y_pred[:, :, :, 0])
+            # score_loss = score_map_loss(true_mask, y_pred[:, :, :, 0])
             # Alternative, use dice_loss like argman's implementation.
-            # score_loss = score_map_dice_loss(true_mask, y_pred[:, :, :, 0])
+            score_loss = score_map_dice_loss(true_mask, y_pred[:, :, :, 0])
             # score_loss = score_map_dice_loss_all(y_true, y_pred)
 
             if self._output_geometry == 'RBOX':
@@ -157,9 +157,9 @@ class EAST:
                 geometry_loss = rbox_geometry_loss(gt_rbox_geometry,
                                                    pred_rbox_geometry)
 
-            return mean(score_loss) + geometry_lambda * mean(true_mask * geometry_loss)
+            # return mean(score_loss) + geometry_lambda * mean(true_mask * geometry_loss)
             # change because of dice loss.
-            # return score_loss + geometry_lambda * mean(true_mask * geometry_loss)
+            return score_loss + geometry_lambda * mean(true_mask * geometry_loss)
 
         return loss
 
