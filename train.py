@@ -152,14 +152,18 @@ def build_data_enqueuer(data_seq):
 class WandbImageLogger(Callback):
     def __init__(self,
                  preprocessed_train_images,
-                 preprocessed_test_images=[]):
+                 train_image_gts,
+                 preprocessed_test_images=[],
+                 test_image_gts=[]):
         super(WandbImageLogger, self).__init__()
 
         assert len(preprocessed_train_images) < 5 and len(
             preprocessed_test_images) < 5
 
         self.train_images = np.asarray(preprocessed_train_images)
+        self.train_image_gts = np.asarray(train_image_gts)
         self.test_images = np.asarray(preprocessed_test_images)
+        self.test_image_gts = np.asarray(test_image_gts)
 
     def on_epoch_end(self, epoch, logs=None):
         # Here, we will run prediction on train images and test images.
@@ -169,35 +173,90 @@ class WandbImageLogger(Callback):
 
         images = []
         score_maps = []
+        ious = []
+        angles = []
 
         for i in range(len(prediction)):
-            boxes = postprocessing.extract_text_boxes(prediction[i],
-                                                      (512, 512),
-                                                      0.5)
-
-            # Randomly choose at maximum 10 boxes to draw.
-            nb_boxes = min(len(boxes), 10)
-            box_indices = np.random.permutation(len(boxes))[:nb_boxes]
-
             is_train_image = i < nb_train_images
-            score_map_img = Image.fromarray(
-                prediction[i][:, :, 0] * 255).convert('L')
-            image = Image.fromarray(self.train_images[i]
-                                    if is_train_image
-                                    else self.test_images[i - nb_train_images])
-            draw = ImageDraw.Draw(image)
+            image_type = 'train' if is_train_image else 'test'
 
-            for nth, box_idx in enumerate(box_indices):
-                box = boxes[box_idx][1].flatten().astype(np.int).tolist()
-                draw.polygon(box)
+            pred = prediction[i]
+            image = (self.train_images[i]
+                     if is_train_image
+                     else self.test_images[i - nb_train_images])
+            gt = (self.train_image_gts[i]
+                  if is_train_image
+                  else self.test_image_gts[i - nb_train_images])
 
-            images.append(wandb.Image(image,
-                                      caption=f"{'train' if is_train_image else 'test'}_image_{i}"))
-            score_maps.append(wandb.Image(score_map_img,
-                                          caption=f"{'train' if is_train_image else 'test'}_score_map_{i}"))
+            images.append(self._box_predictions(image, pred, i, image_type))
+            score_maps.append(self._score_map(pred, i, image_type))
+            ious.append(self._iou(pred, gt, i, image_type))
+            angles.append(self._angle(pred, gt, i, image_type))
 
         wandb.log({'predictions': images}, step=epoch, commit=False)
         wandb.log({'score maps': score_maps}, step=epoch, commit=False)
+        wandb.log({'ious': ious}, step=epoch, commit=False)
+        wandb.log({'angles': angles}, step=epoch, commit=False)
+
+    def _box_predictions(self, image, prediction, ith, image_type):
+        boxes = postprocessing.extract_text_boxes(prediction,
+                                                  (512, 512),
+                                                  0.5)
+
+        # Randomly choose at maximum 10 boxes to draw.
+        nb_boxes = min(len(boxes), 10)
+        box_indices = np.random.permutation(len(boxes))[:nb_boxes]
+
+        image = Image.fromarray(image)
+        draw = ImageDraw.Draw(image)
+
+        for nth, box_idx in enumerate(box_indices):
+            box = boxes[box_idx][1].flatten().astype(np.int).tolist()
+            draw.polygon(box)
+
+        return wandb.Image(image, caption=f'{image_type}_image_{ith}')
+
+    def _score_map(self, prediction, ith, image_type):
+        img = Image.fromarray(prediction[:, :, 0] * 255).convert('L')
+        return wandb.Image(img, caption=f'{image_type}_score_map_{ith}')
+
+    def _iou(self, prediction, gt, ith, image_type):
+        def area(geometry):
+            width = geometry[:, :, 0] + geometry[:, :, 2]
+            height = geometry[:, :, 1] + geometry[:, :, 3]
+            return width * height
+
+        def intersection(pred_geometry, gt_geometry):
+            intersect = np.minimum(pred_geometry, gt_geometry)
+            return area(intersect)
+
+        # We only care about pixels inside the boxes.
+        true_mask = gt[:, :, 0]
+
+        pred_geometry = prediction[:, :, 1:5]
+        gt_geometry = gt[:, :, 1:5]
+
+        intersect_area = intersection(pred_geometry, gt_geometry)
+        union_area = area(pred_geometry) + area(gt_geometry) - intersect_area
+
+        iou = intersect_area / union_area
+        iou = iou * true_mask
+
+        img = Image.fromarray(iou * 255).convert('L')
+        return wandb.Image(img, caption=f'{image_type}_iou_{ith}')
+
+    def _angle(self, prediction, gt, ith, image_type):
+        # We only care about pixels inside the boxes.
+        true_mask = gt[:, :, 0]
+
+        gt_angle = gt[:, :, -1]
+        pred_angle = prediction[:, :, -1]
+
+        angle_diff = np.cos(pred_angle - gt_angle)
+        angle_diff = angle_diff * true_mask
+
+        img = Image.fromarray(angle_diff * 255).convert('L')
+        return wandb.Image(img, caption=f'{image_type}_angle_{ith}')
 
 
 def build_training_callbacks(checkpoint_path, tensorboard_path, early_stopping_patience, wandb):
@@ -268,10 +327,14 @@ if __name__ == "__main__":
         if args.wandb:
             # Get some sample images.
             sample_train_images = train_seq[0][0][:5]
+            sample_train_image_gts = train_seq[0][1][:5]
             sample_val_images = val_seq[0][0][:5]
+            sample_val_image_gts = val_seq[0][1][:5]
 
             training_callbacks = [WandbImageLogger(sample_train_images,
-                                                   sample_val_images)]
+                                                   sample_train_image_gts,
+                                                   sample_val_images,
+                                                   sample_val_image_gts)]
 
         # Build enqueuers.
         train_enqueuer = build_data_enqueuer(train_seq)
