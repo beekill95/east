@@ -31,7 +31,7 @@ class EAST:
 
         if self._training:
             self._east_model.compile(optimizer='adam',
-                                     loss=self._total_loss())
+                                     loss=self._total_loss(geometry_lambda=10))
 
     def load_model(self, weight_path):
         self._assert_model_initialized()
