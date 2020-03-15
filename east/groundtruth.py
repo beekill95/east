@@ -107,7 +107,7 @@ def _generate_geometry_map_np(shrinked_text_boxes_img, text_boxes):
     return geometry_map
 
 
-def generate_ground_truth(image, text_boxes, score_map_offset=10):
+def generate_ground_truth(image, text_boxes, score_map_offset=5):
     # FIXME: the offset should be changed accordingly to the size of the box,
     # or else the offsetted polygon would fall outside of the box.
     shrinked_text_boxes_img = _draw_shrinked_text_boxes(image,

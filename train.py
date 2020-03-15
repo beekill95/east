@@ -2,10 +2,13 @@ import argparse
 from basenet.resnet50_base import ResNet50Base
 from basenet.efficientnetb3_base import EfficientNetB3Base
 from dataset import msra, icdar
-from east import east, preprocessing
+from east import east, preprocessing, postprocessing
 from functools import partial
+import numpy as np
+from PIL import Image, ImageDraw
+import random
 from tensorflow.python.keras.utils.data_utils import OrderedEnqueuer
-from tensorflow.python.keras.callbacks import TensorBoard, ModelCheckpoint, EarlyStopping
+from tensorflow.python.keras.callbacks import Callback, TensorBoard, ModelCheckpoint, EarlyStopping
 import warnings
 
 
@@ -72,6 +75,12 @@ def parse_arguments():
     parser.add_argument('--wandb',
                         action='store_true',
                         help='Use Weight & Bias to track experiments.')
+    parser.add_argument('--random-seed',
+                        action='store',
+                        dest='random_seed',
+                        type=int,
+                        default=77,
+                        help='Set random seed for for reproducible training.')
 
     return parser.parse_args()
 
@@ -140,6 +149,57 @@ def build_data_enqueuer(data_seq):
     return enqueuer
 
 
+class WandbImageLogger(Callback):
+    def __init__(self,
+                 preprocessed_train_images,
+                 preprocessed_test_images=[]):
+        super(WandbImageLogger, self).__init__()
+
+        assert len(preprocessed_train_images) < 5 and len(
+            preprocessed_test_images) < 5
+
+        self.train_images = np.asarray(preprocessed_train_images)
+        self.test_images = np.asarray(preprocessed_test_images)
+
+    def on_epoch_end(self, epoch, logs=None):
+        # Here, we will run prediction on train images and test images.
+        nb_train_images = len(self.train_images)
+        prediction = self.model.predict(np.concatenate((self.train_images,
+                                                        self.test_images)))
+
+        images = []
+        score_maps = []
+
+        for i in range(len(prediction)):
+            boxes = postprocessing.extract_text_boxes(prediction[i],
+                                                      (512, 512),
+                                                      0.5)
+
+            # Randomly choose at maximum 10 boxes to draw.
+            nb_boxes = min(len(boxes), 10)
+            box_indices = np.random.permutation(len(boxes))[:nb_boxes]
+
+            is_train_image = i < nb_train_images
+            score_map_img = Image.fromarray(
+                prediction[i][:, :, 0] * 255).convert('L')
+            image = Image.fromarray(self.train_images[i]
+                                    if is_train_image
+                                    else self.test_images[i - nb_train_images])
+            draw = ImageDraw.Draw(image)
+
+            for nth, box_idx in enumerate(box_indices):
+                box = boxes[box_idx][1].flatten().astype(np.int).tolist()
+                draw.polygon(box)
+
+            images.append(wandb.Image(image,
+                                      caption=f"{'train' if is_train_image else 'test'}_image_{i}"))
+            score_maps.append(wandb.Image(score_map_img,
+                                          caption=f"{'train' if is_train_image else 'test'}_score_map_{i}"))
+
+        wandb.log({'predictions': images}, step=epoch, commit=False)
+        wandb.log({'score maps': score_maps}, step=epoch, commit=False)
+
+
 def build_training_callbacks(checkpoint_path, tensorboard_path, early_stopping_patience, wandb):
     callbacks = []
 
@@ -175,6 +235,10 @@ def build_training_callbacks(checkpoint_path, tensorboard_path, early_stopping_p
 if __name__ == "__main__":
     args = parse_arguments()
 
+    # Set random seed.
+    if args.random_seed:
+        random.seed(args.random_seed)
+
     # Only import wandb when required.
     if args.wandb:
         import wandb
@@ -200,6 +264,15 @@ if __name__ == "__main__":
         train_seq = process_to_train_data(train_seq)
         val_seq = process_to_val_data(val_seq)
 
+        training_callbacks = []
+        if args.wandb:
+            # Get some sample images.
+            sample_train_images = train_seq[0][0][:5]
+            sample_val_images = val_seq[0][0][:5]
+
+            training_callbacks = [WandbImageLogger(sample_train_images,
+                                                   sample_val_images)]
+
         # Build enqueuers.
         train_enqueuer = build_data_enqueuer(train_seq)
         val_enqueuer = build_data_enqueuer(val_seq)
@@ -211,10 +284,10 @@ if __name__ == "__main__":
         # Begin the training.
         try:
             print('\n===== Begin Training =====')
-            training_callbacks = build_training_callbacks(args.checkpoint,
-                                                          args.tensorboard,
-                                                          args.early_stopping_patience,
-                                                          args.wandb)
+            training_callbacks += build_training_callbacks(args.checkpoint,
+                                                           args.tensorboard,
+                                                           args.early_stopping_patience,
+                                                           args.wandb)
 
             east_model.train(train_generator=train_enqueuer.get(),
                              train_steps_per_epoch=len(train_seq),
