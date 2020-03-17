@@ -1,5 +1,6 @@
 from basenet import east_base
 from east.loss import (rbox_geometry_loss,
+                       rbox_geometry_loss_with_beta,
                        score_map_loss,
                        score_map_balanced_entropy_all,
                        score_map_dice_loss,
@@ -149,23 +150,20 @@ class EAST:
 
         def loss(y_true, y_pred):
             true_mask = y_true[:, :, :, 0]
-            score_loss = score_map_loss(true_mask, y_pred[:, :, :, 0])
+            # score_loss = score_map_loss(true_mask, y_pred[:, :, :, 0])
             # Alternative, use dice_loss like argman's implementation.
-            # score_loss = score_map_dice_loss(true_mask, y_pred[:, :, :, 0])
+            score_loss = score_map_dice_loss(true_mask, y_pred[:, :, :, 0])
             # score_loss = score_map_dice_loss_all(y_true, y_pred)
-            # score_loss = score_map_balanced_entropy_all(true_mask,
-            # y_pred[:, :, :, 0])
+            # score_loss = score_map_balanced_entropy_all(true_mask, y_pred[:, :, :, 0])
 
             if self._output_geometry == 'RBOX':
-                gt_rbox_geometry = y_true[:, :, :, 1:]
-                pred_rbox_geometry = y_pred[:, :, :, 1:]
+                # gt_rbox_geometry = y_true[:, :, :, 1:]
+                # pred_rbox_geometry = y_pred[:, :, :, 1:]
 
-                geometry_loss = rbox_geometry_loss(gt_rbox_geometry,
-                                                   pred_rbox_geometry)
+                # geometry_loss = rbox_geometry_loss(gt_rbox_geometry, pred_rbox_geometry)
+                geometry_loss = rbox_geometry_loss_with_beta(y_true, y_pred)
 
             return mean(score_loss) + geometry_lambda * mean(true_mask * geometry_loss)
-            # change because of dice loss.
-            # return score_loss + geometry_lambda * mean(true_mask * geometry_loss)
 
         return loss
 

@@ -86,3 +86,27 @@ def rbox_geometry_loss(ground_truth_rbox_geometry, predicted_rbox_geometry, lamb
     angle_loss = _rbox_angle_loss(ground_truth_angle, predicted_angle)
 
     return rbox_aabb_loss + lambda_term * angle_loss
+
+
+def rbox_geometry_loss_with_beta(groundtruth, prediction, lambda_term=1, EPS=K.epsilon()):
+    ground_truth_score_map = groundtruth[:, :, :, 0]
+    ground_truth_shape = K.cast(K.shape(ground_truth_score_map), 'float32')
+    beta = (K.sum(ground_truth_score_map, axis=[1, 2], keepdims=True) /
+            (ground_truth_shape[1] * ground_truth_shape[2]))
+
+    ground_truth_rbox_geometry = groundtruth[:, :, :, 1:]
+    predicted_rbox_geometry = prediction[:, :, :, 1:]
+
+    # AABB loss.
+    ground_truth_aabb = ground_truth_rbox_geometry[:, :, :, :4]
+    predicted_aabb = predicted_rbox_geometry[:, :, :, :4]
+    rbox_aabb_loss = _rbox_aabb_loss(ground_truth_aabb,
+                                     predicted_aabb,
+                                     EPS=EPS)
+
+    # Angle loss.
+    ground_truth_angle = ground_truth_rbox_geometry[:, :, :, 4]
+    predicted_angle = predicted_rbox_geometry[:, :, :, 4]
+    angle_loss = _rbox_angle_loss(ground_truth_angle, predicted_angle)
+
+    return (1 / beta) * (rbox_aabb_loss + lambda_term * angle_loss)
