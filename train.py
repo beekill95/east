@@ -157,8 +157,8 @@ class WandbImageLogger(Callback):
                  test_image_gts=[]):
         super(WandbImageLogger, self).__init__()
 
-        assert len(preprocessed_train_images) < 5 and len(
-            preprocessed_test_images) < 5
+        assert len(preprocessed_train_images) <= 5 and len(
+            preprocessed_test_images) <= 5
 
         self.train_images = np.asarray(preprocessed_train_images)
         self.train_image_gts = np.asarray(train_image_gts)

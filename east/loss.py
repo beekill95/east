@@ -89,4 +89,4 @@ def rbox_geometry_loss_with_beta(groundtruth, prediction, lambda_term=1, EPS=K.e
     predicted_angle = predicted_rbox_geometry[:, :, :, 4]
     angle_loss = _rbox_angle_loss(ground_truth_angle, predicted_angle)
 
-    return (1 / beta) * (rbox_aabb_loss + lambda_term * angle_loss)
+    return (rbox_aabb_loss + lambda_term * angle_loss) / (beta + EPS)
