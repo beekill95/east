@@ -328,12 +328,17 @@ if __name__ == "__main__":
 
         training_callbacks = []
         if args.wandb:
-            # Get some sample images.
-            sample_train_images = train_seq[0][0][:5]
-            sample_train_image_gts = train_seq[0][1][:5]
-            sample_val_images = val_seq[0][0][:5]
-            sample_val_image_gts = val_seq[0][1][:5]
+            # Get some train sample images.
+            images, groundtruth = train_seq[0]
+            sample_train_images = images[:5]
+            sample_train_image_gts = groundtruth[:5]
 
+            # Get some test sample images.
+            images, groundtruth = val_seq[0]
+            sample_val_images = images[:5]
+            sample_val_image_gts = groundtruth[:5]
+
+            # Create a callback.
             training_callbacks = [WandbImageLogger(sample_train_images,
                                                    sample_train_image_gts,
                                                    sample_val_images,
