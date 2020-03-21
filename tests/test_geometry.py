@@ -79,15 +79,13 @@ def test_polygon_clipping():
     )
 
     # Completely outside.
-    points_completely_outside = np.array([
-        [4, 4],
-        [5, 4],
-        [5, 5],
-        [4, 5]
-    ])
-    cropped_polygon = geometry.crop_polygon(
-        points_completely_outside, crop_region)
-    assert len(cropped_polygon) == 0
+    polygons_completely_outside = [
+        np.array([[4, 4], [5, 4], [5, 5], [4, 5]]),
+        np.array([[3, 3.1], [3, 4], [5, 4], [5, 3]])
+    ]
+    for i, polygon in enumerate(polygons_completely_outside):
+        cropped_polygon = geometry.crop_polygon(polygon, crop_region)
+        assert len(cropped_polygon) == 0, f'Point {i} crop failed!'
 
     # TODO: we should write a test to test the case the box is square,
     # rotated, and have four corner outside of the crop region,

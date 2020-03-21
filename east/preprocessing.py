@@ -188,17 +188,17 @@ def random_crop_with_text_boxes_cropped(target_size, at_least_one_box_ratio, ima
                               crop_left + target_width,
                               crop_top + target_height))
 
-    cropped_text_boxes = (geometry.crop_polygon(
-        box,
-        (crop_left, crop_left + target_width,
-         crop_top, crop_top + target_height)) for box in text_boxes)
+    cropped_text_boxes = (geometry.crop_polygon(box,
+                                                (crop_left, crop_left + target_width,
+                                                 crop_top, crop_top + target_height)
+                                                ) for box in text_boxes)
 
     # Filtered out invalid boxes
     cropped_text_boxes = filter(is_valid_cropped_box, cropped_text_boxes)
 
     # Change the origin to the cropped start.
-    cropped_text_boxes = map(lambda b: b - np.array([crop_left, crop_top]),
-                             cropped_text_boxes)
+    new_origin = np.array([crop_left, crop_top])
+    cropped_text_boxes = map(lambda b: b - new_origin, cropped_text_boxes)
 
     return cropped_img, list(cropped_text_boxes)
 
