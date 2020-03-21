@@ -267,7 +267,8 @@ def build_training_callbacks(checkpoint_path, tensorboard_path, early_stopping_p
             ModelCheckpoint(checkpoint_path,
                             monitor='val_loss',
                             save_weights_only=True,
-                            save_best_only=True)
+                            save_best_only=True,
+                            verbose=1)
         )
 
     if tensorboard_path:
@@ -281,7 +282,8 @@ def build_training_callbacks(checkpoint_path, tensorboard_path, early_stopping_p
     if early_stopping_patience:
         callbacks.append(
             EarlyStopping(monitor='val_loss',
-                          patience=early_stopping_patience)
+                          patience=early_stopping_patience,
+                          verbose=1)
         )
 
     if wandb:

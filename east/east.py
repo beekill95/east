@@ -6,14 +6,9 @@ from east.rbox import decode_rbox
 from east.loss import (rbox_geometry_loss,
                        rbox_geometry_loss_with_beta,
                        score_map_loss,
-                       score_map_balanced_entropy_all,
-                       score_map_dice_loss,
-                       score_map_dice_loss_all)
+                       score_map_dice_loss)
 from east.loss import rbox_geometry_loss, score_map_loss, score_map_dice_loss
 from basenet import east_base
-<< << << < HEAD
-== == == =
->>>>>> > bb12e33... implement geometry loss with beta
 
 
 class EAST:
