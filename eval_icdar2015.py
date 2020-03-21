@@ -22,17 +22,12 @@ def parse_arguments():
                         dest='checkpoint_path',
                         required=True,
                         help='Path to the checkpoint model.')
-    parser.add_argument('--batch-size',
-                        dest='batch_size',
-                        type=int,
-                        default=32,
-                        help='Number of images per batch.')
 
-    parser.add_argument('--target-image-size',
-                        dest='target_image_size',
+    parser.add_argument('--max-target-image-size',
+                        dest='max_target_image_size',
                         type=int,
-                        default=1024,
-                        help='Destination test image size. Must be multiple of 4 and larger than 32.')
+                        default=2400,
+                        help='Maximum target get size of an image to prevent OOM in gpu.')
     parser.add_argument('--score-threshold',
                         dest='score_threshold',
                         type=float,
@@ -74,10 +69,19 @@ def recognize_text(model, images, image_size, score_threshold, nms_threshold):
     return list(map(get_text_boxes, predicted))
 
 
-def test_images_generator(test_dir, batch_size, target_image_size):
+def resize_image_if_neccessary(image, max_target_image_size):
+    img_shape = image.size
+
+    if img_shape[0] > max_target_image_size or img_shape[1] > max_target_image_size:
+        image, _ = preprocessing.resize_image(max_target_image_size, image, [])
+
+    return image
+
+
+def test_images_generator(test_dir, max_target_image_size):
     def preprocess_image(image):
         image, _ = preprocessing.square_padding(image, [])
-        image, _ = preprocessing.resize_image(target_image_size, image, [])
+        image = resize_image_if_neccessary(image, max_target_image_size)
         return np.asarray(image)
 
     def load_image(image_name):
@@ -86,7 +90,7 @@ def test_images_generator(test_dir, batch_size, target_image_size):
 
     image_names = path.list_all_images(test_dir)
 
-    for names in utils.chunk(image_names, batch_size):
+    for names in utils.chunk(image_names, 1):
         if not names:
             break
 
@@ -124,21 +128,22 @@ if __name__ == "__main__":
     args = parse_arguments()
 
     # Store target image size.
-    target_image_size = args.target_image_size
-    assert target_image_size % 4 == 0 and target_image_size >= 32
-    target_image_size = (target_image_size, ) * 2
+    max_target_image_size = args.max_target_image_size
+    assert max_target_image_size % 4 == 0 and max_target_image_size >= 32
 
     # Create output directory.
     path.make_dirs(args.outdir)
 
     # Build the model.
-    model = build_model(args.checkpoint_path, target_image_size)
+    model = build_model(args.checkpoint_path, (None, None))
 
     # Load and recognize the test images.
-    for (names, orig_images, images) in test_images_generator(args.testdir, args.batch_size, target_image_size):
+    for (names, orig_images, images) in test_images_generator(args.testdir, max_target_image_size):
+        # test_images_generator always return 1-image batches.
+        w, h, _ = images[0].shape
         text_boxes = recognize_text(model,
                                     images,
-                                    target_image_size,
+                                    (w, h),
                                     args.score_threshold,
                                     args.nms_threshold)
 
