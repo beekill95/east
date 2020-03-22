@@ -10,6 +10,15 @@ def score_map_dice_loss(groundtruth_score_map, predicted_score_map, EPS=K.epsilo
     return 1. - (2. * intersection / union)
 
 
+def score_map_dice_loss_log(groundtruth_score_map, predicted_score_map, EPS=K.epsilon()):
+    intersection = K.sum(groundtruth_score_map * predicted_score_map,
+                         axis=[1, 2])
+    union = (K.sum(groundtruth_score_map, axis=[1, 2])
+             + K.sum(predicted_score_map, axis=[1, 2])
+             + EPS)
+    return -K.log(EPS + intersection / union)
+
+
 def score_map_loss(ground_truth_score_map, predicted_score_map, EPS=K.epsilon()):
     def log(x): return K.log(K.clip(x, EPS, 1.0))
 
@@ -89,4 +98,3 @@ def rbox_geometry_loss_with_beta(groundtruth, prediction, lambda_term=1, EPS=K.e
     angle_loss = _rbox_angle_loss(ground_truth_angle, predicted_angle)
 
     return (rbox_aabb_loss + lambda_term * angle_loss) / (beta + EPS)
-
