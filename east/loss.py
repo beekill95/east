@@ -49,7 +49,8 @@ def _rbox_aabb_loss(ground_truth_aabb, predicted_aabb, EPS=K.epsilon()):
                                               predicted_aabb)
     union_area = ground_truth_area + predicted_area - intersected_area
 
-    return -tf.math.log((intersected_area + EPS) / (union_area + EPS))
+    # Equivalent to -log(intersected_area / union_area)
+    return K.log(union_area + EPS) - K.log(intersected_area + EPS)
 
 
 def rbox_geometry_loss(ground_truth_rbox_geometry, predicted_rbox_geometry, lambda_term=10, EPS=K.epsilon()):
