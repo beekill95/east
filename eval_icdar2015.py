@@ -5,7 +5,18 @@ from dataset import path
 from itertools import repeat
 import numpy as np
 from PIL import Image
+import time
 import utils
+
+
+def time_it(name):
+    start = time.time()
+
+    def end():
+        end = time.time()
+        print(f'{name} took {end - start} seconds.')
+
+    return end
 
 
 def parse_arguments():
@@ -65,8 +76,15 @@ def recognize_text(model, images, image_size, score_threshold, nms_threshold):
                            for b in predicted_boxes]
         return nms.nms_locality(predicted_boxes, nms_threshold)
 
+    time_model = time_it('model')
     predicted = model.predict(np.asarray(images))
-    return list(map(get_text_boxes, predicted))
+    time_model()
+
+    time_nms = time_it('nms')
+    boxes = list(map(get_text_boxes, predicted))
+    time_nms()
+
+    return boxes
 
 
 def resize_image_if_neccessary(image, max_target_image_size):
@@ -139,6 +157,8 @@ if __name__ == "__main__":
 
     # Load and recognize the test images.
     for (names, orig_images, images) in test_images_generator(args.testdir, max_target_image_size):
+        print('===')
+
         # test_images_generator always return 1-image batches.
         w, h, _ = images[0].shape
         text_boxes = recognize_text(model,
@@ -147,8 +167,13 @@ if __name__ == "__main__":
                                     args.score_threshold,
                                     args.nms_threshold)
 
+        time_scale_back = time_it('scale_back')
         text_boxes = scale_text_boxes(text_boxes, images, orig_images)
+        time_scale_back()
 
         # Save recognition results to files.
+        time_save_results = time_it('save_result')
         for params in zip(names, text_boxes, repeat(args.outdir)):
             save_recognition_result(*params)
+        time_save_results()
+
