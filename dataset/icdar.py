@@ -43,8 +43,9 @@ class ICDAR2015Sequence(Sequence):
                     text = ','.join(fields[8:])
 
                     # Append 0 for dummy difficulty.
-                    if text != '###':
-                        text_boxes.append([0, *coords])
+                    text_boxes.append([0, *coords])
+                    # if text != '###':
+                    #     text_boxes.append([0, *coords])
 
             return text_boxes
 
