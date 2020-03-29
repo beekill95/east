@@ -32,7 +32,7 @@ class EAST:
 
         if self._training:
             self._east_model.compile(optimizer='adam',
-                                     loss=self._total_loss())
+                                     loss=self._total_loss(geometry_lambda=10))
 
     def load_model(self, weight_path):
         self._assert_model_initialized()
@@ -152,8 +152,8 @@ class EAST:
             true_mask = y_true[:, :, :, 0]
             # score_loss = score_map_loss(true_mask, y_pred[:, :, :, 0])
             # Alternative, use dice_loss like argman's implementation.
-            # score_loss = score_map_dice_loss(true_mask, y_pred[:, :, :, 0])
-            score_loss = score_map_dice_loss_log(true_mask, y_pred[:, :, :, 0])
+            score_loss = score_map_dice_loss(true_mask, y_pred[:, :, :, 0])
+            # score_loss = score_map_dice_loss_log(true_mask, y_pred[:, :, :, 0])
 
             if self._output_geometry == 'RBOX':
                 # gt_rbox_geometry = y_true[:, :, :, 1:]
